@@ -1,0 +1,81 @@
+@Struct
+script EquipmentItemStruct extends ItemStruct
+
+	property integer type = 0
+
+	property integer level = 1
+
+	property table skillZ = {}
+
+	property table skillX = {}
+
+	property table skillC = {}
+
+	property boolean isEquiped = false
+
+	method boolean Use(EntityRef entity)
+		--__base:UseItem(event,entity)
+		--플레이어가 아이템을 장착할 수 있는지 확인해야한다.
+		--조건에 부합하는지 확인한다.
+		--1.전투 중에는 교체가 불가능하다.
+		--2.상점 ui나 대화 ui를 켠상태에서 교체 불가능 <-- 클라에서 클릭 요청할 때 할일이다.
+		-- 현재는 테스트 이므로 먼저 전투 구현을 집중한다.
+		
+		-- 현재 장착하고 있는 아이템이랑 같은 아이템이면 장착 이벤트를 보내지 않는다.
+		local playerEquipment = entity.PlayerEquipmentComponent
+		if playerEquipment == nil then
+			return
+		end
+		
+		local equipmentInfo = _GlobalData:GetEquipmentItem(self.itemId)
+		if equipmentInfo == nil then
+				return
+		end
+		
+		if playerEquipment:IsEquiped(self) == true then
+			-- 장착하고 있는 아이템과 같은 아이템을 Use 요청할 경우
+			playerEquipment:SyncUnEquipItem(equipmentInfo.partType,false)
+			return false
+		end
+		
+		--서버에서 아이템을 먼저 장착한다.
+		playerEquipment:SyncUnEquipItem(equipmentInfo.partType,true)
+		--playerEquipment:EquipItem(self)
+		playerEquipment:SyncEquipItem(self)
+		
+		log(_GlobalData:GetItem(tostring(self.itemId)).name.."를 장착합니다.")
+		return true
+	end
+
+	method void TryRandomSkill(integer itemIndex)
+		local equipmentInfo = _GlobalData:GetEquipmentItem(itemIndex)
+		if equipmentInfo == nil then	
+			return
+		end
+		
+		local skill_Id_Table = _GlobalData:GetSkillTypeTable(equipmentInfo.weaponType)
+		-- skill_Id_Table[rating] = {id,id,..}
+		local rating = math.random(equipmentInfo.rating)
+		local skillCount = #skill_Id_Table[rating]
+		self.skillZ["id"] = skill_Id_Table[rating][math.random(skillCount)]
+		--self.skillZ["id"] = 23
+		--log("self.skillZ[\"id\"] = "..self.skillZ["id"])
+		--self.skillZ["level"] = math.random(10)
+		
+		rating = math.random(equipmentInfo.rating)
+		skillCount = #skill_Id_Table[rating]
+		self.skillX["id"] = skill_Id_Table[rating][math.random(skillCount)]
+		--self.skillX["level"] = math.random(10)
+		
+		self.type = math.random(7)
+	end
+
+	method boolean IsIncludeAbility()
+		return true
+	end
+
+	method boolean IsWeapon()
+		return true
+	end
+
+end

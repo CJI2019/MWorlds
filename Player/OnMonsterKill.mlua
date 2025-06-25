@@ -1,0 +1,6 @@
+@Event
+script OnMonsterKill extends EventType
+
+	property string mobId = ""
+
+end

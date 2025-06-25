@@ -1,0 +1,89 @@
+@Logic
+script UIController extends Logic
+
+	property integer isItemSlotSwapEnabled = 0
+
+	property boolean isEnchanting = false
+
+	property EntityRef inventory = "44fd333d-671b-488d-89fa-178798f0faa2"
+
+	property table openUIStack = {}
+
+	property EntityRef questList = "7f397be8-2d5d-4f95-9095-b9fd2d06e76d"
+
+	property EntityRef tempUI = nil
+
+	property EntityRef enchantUI = "d0833aa6-0994-4e8f-86ac-b483ba247d8e"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.tempUI = _EntityService:GetEntityByPath("/ui/UIGroup")
+	end
+
+	method void PopUI(EntityRef target)
+		if target ~= nil and self.openUIStack[#self.openUIStack] ~= target then
+			for pos,e in ipairs(self.openUIStack) do
+				if e == target then
+					target.Enable = false
+					table.remove(self.openUIStack,pos)			
+				end	
+			end	
+			
+			return
+		end
+		
+		self.openUIStack[#self.openUIStack].Enable = false
+		table.remove(self.openUIStack,#self.openUIStack)
+	end
+
+	method void FrontOrderGroup(EntityRef target)
+		if #self.openUIStack > 0 then
+			local originalParent = target.Parent
+			target:AttachTo(self.tempUI)
+			target:AttachTo(originalParent)
+		end
+		table.insert(self.openUIStack,target)
+	end
+
+	method void KeyFunction(any key)
+		if key == KeyboardKey.I then
+			if self.inventory.Enable then
+				self:PopUI(self.inventory)
+			else
+				self:FrontOrderGroup(self.inventory)
+				self.inventory.Enable = true
+			end
+		elseif key == KeyboardKey.O then
+			if self.enchantUI.Enable then
+				self:PopUI(self.enchantUI)
+			else
+				self:FrontOrderGroup(self.enchantUI)
+				self.enchantUI.Enable = true
+			end
+		elseif key == KeyboardKey.J then
+			if self.questList.Enable then
+				self:PopUI(self.questList)
+			else
+				self.questList.UIQuestComponent:OpenUI()
+				self:FrontOrderGroup(self.questList)
+			end
+		elseif key == KeyboardKey.Escape then
+			self:PopUI(nil)
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyDownEvent(KeyDownEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local key = event.key
+		---------------------------------------------------------
+		self:KeyFunction(key)
+	end
+
+end

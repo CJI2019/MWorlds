@@ -1,0 +1,39 @@
+@Logic
+script ItemUI extends Logic
+
+	property Entity TargetUIEntity = nil
+
+	property Entity ItemInfoEntity = "4c3c3214-964a-45b6-bf22-8c6b13b00167"
+
+	property EntityRef tempUI = nil
+
+	method void SetTargetEntity(EntityRef entity)
+		self.TargetUIEntity = entity
+		local TargetInfoUpdateComponent = self.ItemInfoEntity.TargetInfoUpdateComponent
+		if entity ~= nil then
+		    --log(entity.Name)
+			if TargetInfoUpdateComponent then
+				TargetInfoUpdateComponent:SetTarget(self.TargetUIEntity)
+				self:FrontOrderGroup()
+		        --self.ItemInfoEntity:SetEnable(true)
+			end
+		else
+			if TargetInfoUpdateComponent then
+				TargetInfoUpdateComponent:SetTarget(self.TargetUIEntity)
+		        --self.ItemInfoEntity:SetEnable(false)
+			end
+		end
+	end
+
+	method void FrontOrderGroup()
+		local originalParent = self.ItemInfoEntity.Parent
+		self.ItemInfoEntity:AttachTo(self.tempUI)
+		self.ItemInfoEntity:AttachTo(originalParent)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.tempUI = _EntityService:GetEntityByPath("/ui/UIGroup")
+	end
+
+end

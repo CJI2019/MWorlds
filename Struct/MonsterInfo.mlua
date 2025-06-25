@@ -1,0 +1,20 @@
+@Struct
+script MonsterInfo
+
+	property string name = ""
+
+	property table items = {}
+
+	property integer level = 0
+
+	property number power = 0
+
+	property string monsterId = ""
+
+	property number exp = 0
+
+	property number maxHp = 0
+
+	property number defense = 0
+
+end

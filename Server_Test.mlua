@@ -1,0 +1,37 @@
+@Component
+script Server_Test extends Component
+
+	property number value = 0
+
+	@ExecSpace("Multicast")
+	method void CommonFunction()
+		log("공지")
+	end
+
+	@ExecSpace("Server")
+	method void ServerFunction(string userId)
+		log("ServerFunction 호출")
+		log("UserId => ",userId)
+		self:ClientFunction(userId)
+	end
+
+	@ExecSpace("Client")
+	method void ClientFunction()
+		log("ClientFunction 호출")
+	end
+
+	method void OnBeginPlay()
+		if self:IsClient() then
+			log("client에서 실행")
+		    --log(_UserService.LocalPlayer.PlayerComponent.UserId)
+			self:ServerFunction(_UserService.LocalPlayer.PlayerComponent.UserId)
+		elseif self:IsServer() then
+			log("server에서 실행")
+		    --wait(1) --클라이언트에서도 실행되어야할 CommonFunction이 서버를 실행하기전에 클라가 들어와 버려서
+			self:CommonFunction()
+		end
+		
+		
+	end
+
+end

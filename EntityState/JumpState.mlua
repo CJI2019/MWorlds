@@ -1,0 +1,14 @@
+@State
+script JumpState extends StateType
+
+	method void OnEnter()
+		local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
+		
+		spriteRenderer.SpriteRUID = self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["die"]
+	end
+
+	method boolean OnConditionCheck(string nextStateName)
+		return not self.ParentComponent.Entity.Monster.isJump 
+	end
+
+end

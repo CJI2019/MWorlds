@@ -1,0 +1,55 @@
+@Component
+script DisplayComponent extends Component
+
+	property EntityRef ShowingUI = "3d68fc76-3f90-4e72-a153-c276a39390c8"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.ShowingUI.Enable = false
+	end
+
+	@ExecSpace("ClientOnly")
+	method void ToggleUI(boolean show)
+		self.ShowingUI.Enable = show
+		local event = TESTEvent()
+		self.Entity:SendEvent(event)
+		log(self.ShowingUI.Enable)
+	end
+
+	@EventSender("Self")
+	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TriggerComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TriggerBodyEntity = event.TriggerBodyEntity
+		---------------------------------------------------------
+		    local TriggerBodyEntity = event.TriggerBodyEntity
+		    ---------------------------------------------------------
+		
+		    if self:IsClient() then
+		        self:ToggleUI(true)
+		    end
+	end
+
+	@EventSender("Self")
+	handler HandleTriggerLeaveEvent(TriggerLeaveEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TriggerComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TriggerBodyEntity = event.TriggerBodyEntity
+		---------------------------------------------------------
+		    local TriggerBodyEntity = event.TriggerBodyEntity
+		    ---------------------------------------------------------
+		
+		    if self:IsClient() then
+		        self:ToggleUI(false)
+		    end
+	end
+
+end

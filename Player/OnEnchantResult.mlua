@@ -1,0 +1,6 @@
+@Event
+script OnEnchantResult extends EventType
+
+	property integer result = 0
+
+end

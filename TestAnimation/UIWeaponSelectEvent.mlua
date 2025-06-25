@@ -1,0 +1,6 @@
+@Event
+script UIWeaponSelectEvent extends EventType
+
+	property ComponentRef EventSender = nil
+
+end

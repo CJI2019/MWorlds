@@ -1,0 +1,10 @@
+@Event
+script SyncItemAbilityData extends EventType
+
+	property table inventoryIndex_Table = {}
+
+	property table itemLevels = {}
+
+	property table skillIds = {}
+
+end

@@ -1,0 +1,34 @@
+@Component
+script SoundTableComponent extends Component
+
+	@DisplayName("sounds")
+	@Description("사운드들의 RUID를 저장한다")
+	property table sounds = {}
+
+	@Sync
+	property number table_number = 0
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		local dataTable = _DataService:GetTable("SoundDataTable"):GetRow(self.table_number)
+		
+		self.sounds = {
+			hit = dataTable:GetItem("hit"),
+			dead = dataTable:GetItem("dead")
+		}
+		--self.sounds["hit"] = dataTable:GetItem("hit")
+		--self.sounds["dead"] = dataTable:GetItem("dead")
+	end
+
+	@ExecSpace("Client")
+	method void PlayHit()
+		_SoundService:PlaySound(self.Entity.SoundTableComponent.sounds["hit"],0.5)
+		--log("hitsound")
+	end
+
+	@ExecSpace("Client")
+	method void PlayDead()
+		_SoundService:PlaySound(self.Entity.SoundTableComponent.sounds["dead"],1)
+	end
+
+end

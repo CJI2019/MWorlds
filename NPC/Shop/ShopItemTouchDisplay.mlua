@@ -1,0 +1,73 @@
+@Component
+script ShopItemTouchDisplay extends Component
+
+	property integer click = 0
+
+	property EntityRef confirmUI = "adcf3575-f338-43d3-940a-35691cd8f7d4"
+
+	@EventSender("Self")
+	handler HandleUITouchEnterEvent(UITouchEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		--log("Begin Touch")
+		local entity = self.Entity
+		_ItemUI:SetTargetEntity(entity)
+		
+	end
+
+	@EventSender("Self")
+	handler HandleUITouchExitEvent(UITouchExitEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		--log("Exit Touch")
+		if _ItemUI.TargetUIEntity == self.Entity then
+			_ItemUI:SetTargetEntity(nil)
+		end
+	end
+
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ButtonComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		 local Entity = event.Entity
+		---------------------------------------------------------
+		--log(Entity.Name.."Click")
+		local InitClick = function()
+			self.click = 0
+		end
+		self.click += 1
+		
+		_TimerService:SetTimerOnce(InitClick,0.3)
+		
+		if self.click == 2 then
+			-- entity의 아이템 이름 필요.
+			local yesnocomp = self.confirmUI.YesORNoBoxComponent
+			if yesnocomp then
+				yesnocomp:SetItemInfo(self.Entity.ItemDescriptor.itemInfo)
+			end
+		
+			self.confirmUI:SetEnable(true)
+		end
+	end
+
+end

@@ -1,0 +1,52 @@
+@Component
+script UIShopInventory extends Component
+
+	property Entity itemUI = "bf65f9ae-a510-4675-94bb-7f23b350609e"
+
+	property Entity scrollView = "edc54963-ad83-48af-9d65-928283d71d52"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		local closeButton = _EntityService:GetEntityByPath(self.Entity.Path .. "/CloseButton")
+		local closeFunc = function()
+			self.Entity:SetEnable(false)
+		end
+		closeButton:ConnectEvent(ButtonClickEvent, closeFunc)
+		
+		self._T.slotList = {}
+		self.itemUI:SetEnable(false) -- 첫 Slot은 더미이므로 활성x
+		--local shopdataset = _DataService:GetTable("ItemDataTable")
+		
+		for i = 1, 20 do
+		    local item_slot = self:AddSlot(i)
+			self._T.slotList[i] = item_slot
+			item_slot:SetEnable(false)
+		end
+	end
+
+	method Entity AddSlot(number itemCount)
+		local itemSlot =_SpawnService:SpawnByEntity(self.itemUI, "Item", Vector3.zero, self.scrollView)
+		return itemSlot
+	end
+
+	method void ShopUpdate(table iteminfolist)
+		for shopItemId = 1 , #iteminfolist do
+			if #self._T.slotList < shopItemId then
+				self._T.slotList[shopItemId] = self:AddSlot(shopItemId)
+			end
+			---@type EntityRef
+			local item_slot = self._T.slotList[shopItemId]
+			local descriptor = item_slot.ItemDescriptor
+			if descriptor == nil then
+				log("descriptor component is null")
+				continue
+			end
+			local iteminfo = iteminfolist[shopItemId]
+			descriptor:SetDescriptor(iteminfo)
+			local imageEntity = item_slot:GetChildByName("img_slot")
+		    imageEntity.SpriteGUIRendererComponent.ImageRUID = iteminfo.ruid
+			item_slot:SetEnable(true)
+		end
+	end
+
+end

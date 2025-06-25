@@ -1,0 +1,12 @@
+@State
+script MoveState extends StateType
+
+	method void OnEnter()
+		-- MOVE 스테이트는 더미 스테이트나 다름 없음. OnEnter가 호출은 되나 효과가 없음.
+		-- 강제로  StateAnimationComponent의 'move' 로 매핑됨
+		local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
+		
+		spriteRenderer.SpriteRUID = self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["move"]
+	end
+
+end

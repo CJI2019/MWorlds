@@ -1,0 +1,22 @@
+@Component
+script UIQuestTitleComponent extends Component
+
+	property string questId = ""
+
+	property EntityRef questList = nil
+
+	method void SetQuestId(string questId)
+		self.questId = questId
+		
+		if self.questList == nil then
+			self.questList = _EntityService:GetEntityByPath("/ui/PopupGroup/QuestList")
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		self.questList.UIQuestComponent:DetailQuest(self.questId)
+	end
+
+end

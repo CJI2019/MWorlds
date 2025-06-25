@@ -1,0 +1,21 @@
+@BTNode
+script Deco_IsStop extends BTNode
+
+	property any child = nil
+
+	method any OnBehave(number delta)
+		---@type AIFollowAndWanderComponent
+		local parentAI = self.ParentAI
+		
+		if parentAI.isStop then
+			return BehaviourTreeStatus.Failure
+		end
+		
+		if self.child == nil then
+			return BehaviourTreeStatus.Failure
+		end
+		
+		return self.child:Behave(delta)
+	end
+
+end

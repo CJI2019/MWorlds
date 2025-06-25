@@ -1,0 +1,58 @@
+@BTNode
+script PlayerFollow extends BTNode
+
+	property number time = 0
+
+	property Entity parent = nil
+
+	method void OnInit()
+		self.time = 0
+		self.parent = self.ParentAI.Entity
+	end
+
+	method any OnBehave(number delta)
+		self.time += delta
+		local my_pos = self.parent.TransformComponent.WorldPosition
+		local cur_map_users = _UserService:GetUsersByMapComponent(self.parent.CurrentMap.MapComponent)
+		
+		local cnt = 1
+		local min_dis_user
+		local min_dis = 10000
+		
+		while(cnt <= #cur_map_users)
+		do
+			local user_pos = cur_map_users[cnt].TransformComponent.WorldPosition
+			user_pos.z = my_pos.z
+			local dis = user_pos:Distance(my_pos)
+			if dis < 2 and dis < min_dis then
+				min_dis = dis
+				min_dis_user = cur_map_users[cnt]
+			end
+		    --log(my_pos)
+			cnt += 1
+		end
+		
+		local my_move = self.parent.MovementComponent
+		if min_dis ~= 10000 then -- 거리내에 플레이어가 존재하므로 그 플레이어를 따라감.
+		    --log("run")
+		    --log(min_dis_user.Name)
+			local speed = my_move.InputSpeed
+			local dir = Vector2(min_dis_user.TransformComponent.WorldPosition.x 
+				- self.parent.TransformComponent.WorldPosition.x,0)
+			my_move:MoveToDirection(dir,delta*speed)
+			if my_move:IsFaceLeft() and dir.x > 0 then
+				self.parent.SpriteRendererComponent.FlipX = true
+			else 
+				self.parent.SpriteRendererComponent.FlipX = false
+			end
+			self.parent.StateComponent:ChangeState("MOVE")
+			return BehaviourTreeStatus.Running
+		else
+			my_move:Stop()
+			self.parent.StateComponent:ChangeState("IDLE")
+		    --log("fail")
+			return BehaviourTreeStatus.Failure
+		end
+	end
+
+end

@@ -1,0 +1,22 @@
+@Component
+script ClearInventoryOnBeginPlay extends Component
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		-- 테스트용 인벤토리 초기화
+		if self.Enable == false then
+		   	return
+		end
+		
+		local inven = self.Entity.PlayerInventory
+		
+		while not inven.IsInitialized do
+		  	wait(0.5)
+		end
+		
+		for i = 1, _DataService:GetTable("ItemDataTable"):GetRowCount() do
+			inven:RemoveItem(i)
+		end
+	end
+
+end

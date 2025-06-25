@@ -1,0 +1,10 @@
+@Event
+script OnQuestProgressModify extends EventType
+
+	property string questId = ""
+
+	property integer progress = 0
+
+	property string reason = ""
+
+end

@@ -1,0 +1,30 @@
+@Struct
+script ItemInfo
+
+	property integer buyprice = 0
+
+	property integer sellprice = 0
+
+	property string name = ""
+
+	property string ruid = ""
+
+	property string description = ""
+
+	property integer shopItemId = -1
+
+	property string item_Id = ""
+
+	property integer isUse = 0
+
+	property string type = ""
+
+	method void SetItemInfo(integer buyprice, integer sellprice, string name, string ruid, string description)
+		self.buyprice = buyprice
+		self.sellprice = sellprice
+		self.name = name
+		self.ruid = ruid
+		self.description = description
+	end
+
+end

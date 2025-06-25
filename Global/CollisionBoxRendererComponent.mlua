@@ -1,0 +1,124 @@
+@Component
+script CollisionBoxRendererComponent extends LineRendererComponent
+
+	property EntityRef Common = "b447311c-6f03-4ba1-aad0-8f0fe58df5c1"
+
+	@ExecSpace("ClientOnly")
+	method void OnInitialize()
+		self.OrderInLayer = 1000
+		--local TC = self.Entity.TriggerComponent
+		--if TC then
+		--    local worldBoxPos = Vector2(
+		--        TC.ColliderOffset.x,
+		--        TC.ColliderOffset.y
+		--    )
+		--    local p1 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+		--    local p2 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+		--    local p3 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+		--    local p4 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+		--    
+		--    self.Points:Insert(1,LinePoint(p1,Color(255,0,0),0.2))
+		--    self.Points:Insert(2,LinePoint(p2,Color(255,0,0),0.2))
+		--    self.Points:Insert(3,LinePoint(p3,Color(255,0,0),0.2))
+		--    self.Points:Insert(4,LinePoint(p4,Color(255,0,0),0.2))
+		--    log("콜리전박스초기화 : ",self.Entity.Name)
+		--else
+		--    log("콜리전박스초기화 실패: ",self.Entity.Name)
+		--end
+		--
+		----local TC = self.Entity.TriggerComponent
+		--
+		--self.Loop = true
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		local TC = self.Entity.TriggerComponent
+		if TC then
+		    local worldBoxPos = Vector2(
+		        TC.ColliderOffset.x,
+		        TC.ColliderOffset.y
+		    )
+		    local p1 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+		    local p2 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+		    local p3 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+		    local p4 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+		    
+		    self.Points:Insert(1,LinePoint(p1,Color(255,0,0),0.2))
+		    self.Points:Insert(1,LinePoint(p2,Color(255,0,0),0.2))
+		    self.Points:Insert(1,LinePoint(p3,Color(255,0,0),0.2))
+		    self.Points:Insert(1,LinePoint(p4,Color(255,0,0),0.2))
+		    --log("트리거콜리전박스초기화 : ",self.Entity.Name)
+		end
+		
+		local HC = self.Entity.HitComponent
+		if HC then
+		    local worldBoxPos = Vector2(
+		        HC.ColliderOffset.x,
+		        HC.ColliderOffset.y
+		    )
+		    local p1 = Vector2(worldBoxPos.x - (HC.BoxSize.x/2),worldBoxPos.y - (HC.BoxSize.y/2))
+		    local p2 = Vector2(worldBoxPos.x - (HC.BoxSize.x/2),worldBoxPos.y + (HC.BoxSize.y/2))
+		    local p3 = Vector2(worldBoxPos.x + (HC.BoxSize.x/2),worldBoxPos.y + (HC.BoxSize.y/2))
+		    local p4 = Vector2(worldBoxPos.x + (HC.BoxSize.x/2),worldBoxPos.y - (HC.BoxSize.y/2))
+		    
+		    self.Points:Insert(1,LinePoint(p1,Color(0,255,0),0.2))
+		    self.Points:Insert(1,LinePoint(p2,Color(0,255,0),0.2))
+		    self.Points:Insert(1,LinePoint(p3,Color(0,255,0),0.2))
+		    self.Points:Insert(1,LinePoint(p4,Color(0,255,0),0.2))
+		    --log("콜리전박스초기화 : ",self.Entity.Name)
+		end
+		
+		--local TC = self.Entity.TriggerComponent
+		
+		self.Loop = true
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		local TC = self.Entity.TriggerComponent
+		
+		if TC then
+			local worldBoxPos = Vector2(
+				TC.ColliderOffset.x,
+				TC.ColliderOffset.y
+			)
+		
+			local p1 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+			local p2 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+			local p3 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
+			local p4 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
+			
+			self.Points[1].Position = p1
+			self.Points[2].Position = p2
+			self.Points[3].Position = p3
+			self.Points[4].Position = p4
+		end
+		
+		local HC = self.Entity.HitComponent
+		
+		if HC then
+		    local worldBoxPos = Vector2(
+		        HC.ColliderOffset.x,
+		        HC.ColliderOffset.y
+		    )
+		
+		    local p1 = Vector2(worldBoxPos.x - (HC.BoxSize.x/2),worldBoxPos.y - (HC.BoxSize.y/2))
+		    local p2 = Vector2(worldBoxPos.x - (HC.BoxSize.x/2),worldBoxPos.y + (HC.BoxSize.y/2))
+		    local p3 = Vector2(worldBoxPos.x + (HC.BoxSize.x/2),worldBoxPos.y + (HC.BoxSize.y/2))
+		    local p4 = Vector2(worldBoxPos.x + (HC.BoxSize.x/2),worldBoxPos.y - (HC.BoxSize.y/2))
+		    if TC then
+			    self.Points[5].Position = p1
+			    self.Points[6].Position = p2
+			    self.Points[7].Position = p3
+			    self.Points[8].Position = p4
+			else
+			    self.Points[1].Position = p1
+			    self.Points[2].Position = p2
+			    self.Points[3].Position = p3
+			    self.Points[4].Position = p4
+			end
+		end
+	end
+
+end

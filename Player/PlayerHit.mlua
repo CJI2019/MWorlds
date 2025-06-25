@@ -1,0 +1,81 @@
+@Component
+script PlayerHit extends HitComponent
+
+	property number ImmuneCooldown = 1
+
+	property number LastHitTime = 0
+
+	method boolean IsHitTarget(string attackInfo)
+		local currentTime = _UtilLogic.ElapsedSeconds
+		if self.LastHitTime + self.ImmuneCooldown < currentTime then
+			self.LastHitTime = _UtilLogic.ElapsedSeconds
+			return true
+		end
+		
+		return false
+	end
+
+	method void OnHit(Entity attacker, integer damage, boolean isCritical, string attackInfo, int32 hitCount)
+		--__base:OnHit(attacker,damage,isCritical,attackInfo,hitCount)
+		self:SendHitEvent(attacker, damage, isCritical, attackInfo)
+	end
+
+	method void SendHitEvent(Entity attacker, integer damage, boolean isCritical, string attackInfo)
+		local event = HitEvent()
+		event.AttackerEntity = attacker
+		event.TotalDamage = damage
+		event.IsCritical = isCritical
+		event.Extra = attackInfo
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleHitEvent(HitEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: HitComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local AttackCenter = event.AttackCenter
+		local AttackerEntity = event.AttackerEntity
+		-- local Damages = event.Damages
+		local Extra = event.Extra -- 몬스터의 x값을 string 정보로 추가
+		local IsCritical = event.IsCritical
+		local TotalDamage = event.TotalDamage
+		---------------------------------------------------------
+		
+		--log(string.format("%s 가 %s 를 공격", AttackerEntity.Name,self.Entity.Name))
+		
+		local dir = tonumber(Extra) - self.Entity.TransformComponent.WorldPosition.x <= 0.0 and 2 or -2
+		
+		self.Entity.RigidbodyComponent:AddForce(Vector2(dir,2))
+		if self.Entity.PlayerComponent.Hp - TotalDamage > 0 then
+		    self.Entity.StateComponent:ChangeState("HIT")	
+		else
+			self.Entity.StateComponent.Enable = true
+			self.Entity.StateComponent:ChangeState("DEAD")
+			self.Entity.PlayerComponent.Hp = 0
+			self.Entity.PlayerComponent:ProcessDead()
+		end
+		
+		self.Entity.AvatarRendererComponent.MaterialId = "material://3fdc828f-04e2-495d-a862-6d700187dd85" --AvatarHitEffectShader 
+		_TimerService:SetTimerOnce(function()
+			self.Entity.AvatarRendererComponent.MaterialId = ""	
+		end,0.8)
+		
+		_DamageSkinService:Play(self.Entity, "02c22d93421b4038b3c413b3e40b57ec", 0.05, {TotalDamage}, DamageSkinTweenType.Default, IsCritical)
+	end
+
+	@EventSender("Self")
+	handler HandleDeadEvent(DeadEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: StateComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		--log("dead")
+		self.Entity.PlayerControllerComponent.Enable = false
+	end
+
+end

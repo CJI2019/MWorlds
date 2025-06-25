@@ -1,0 +1,261 @@
+@Component
+script AbilityComponent extends Component
+
+	@Sync
+	property number exp = 0
+
+	@Sync
+	property number power = 5
+
+	@Sync
+	property number defense = 0
+
+	@Sync
+	property number critical = 5
+
+	@Sync
+	property number critical_Damage = 100
+
+	@Sync
+	property number skill_Damage = 100
+
+	@Sync
+	property SyncTable<integer> buffs
+
+	property UIMyInfoSimpleRef uiInfo = "b6fb0344-465b-49da-8061-8a44dc2fef83"
+
+	@Sync
+	property number sp = 500
+
+	@Sync
+	property number maxSP = 500
+
+	@Sync
+	property integer level = 1
+
+	@Sync
+	property number maxExp = 0
+
+	property number restoreSP = 20
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		--wait()
+		self.maxExp = _LevelManager:BeiginPlayIsAvailableAndGetLevelExp(self.level)
+		self:SyncExpCheck(0,self.Entity.PlayerComponent.UserId)
+		--log("abilitycomponent")
+		self._T.autoRestoreStaminaTimerHandle = _TimerService:SetTimerRepeat(self.AutoRestoreStamina,10)
+		
+		self._T.default_Defense = self.defense
+		self._T.dafault_MaxSP = self.maxSP
+		self._T.default_RestoreSP = self.restoreSP
+		self._T.dafault_MaxHP = self.Entity.PlayerComponent.MaxHp
+		self._T.default_Critical = self.critical
+		self._T.default_Critical_Damage = self.critical_Damage
+		self._T.default_Power = self.power
+		self._T.default_Skill_Damage = self.skill_Damage
+	end
+
+	@ExecSpace("Server")
+	method void SaveAbilityData()
+		
+	end
+
+	@ExecSpace("Server")
+	method void LoadAbilityData()
+		
+	end
+
+	@ExecSpace("Client")
+	method void SyncExpCheck(number addExp)
+		if _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			log("로컬 유저가 아닌 클라이언트에서 Client 함수를 호출했습니다.")
+		end
+		self.uiInfo:SyncEXP()
+	end
+
+	@ExecSpace("ServerOnly")
+	method void AddExp(number exp)
+		self.exp += exp
+		if self.exp >= self.maxExp then
+			self.exp = self.exp - self.maxExp
+			self.level += 1
+			self.maxExp = _LevelManager:Get_LevelUp_Requirement(self.level)
+			-- LevelUpEvent SendEvent
+			local event = OnLevelUp()
+			self:SendLevelUpEvent(event)
+		end
+		self:SyncExpCheck(exp,self.Entity.PlayerComponent.UserId)
+	end
+
+	method integer DamageCalculator(SkillInfo skillInfo, table damages, table criticals)
+		local totalDamage = 0
+		
+		for i = 1, skillInfo.hitcount do
+			local damage = (skillInfo.power * 0.01) * self.power * (self.skill_Damage * 0.01)
+			damage += damage * (math.random(-10,10) * 0.01)
+			
+			if self:IsCritical() then
+				damage += damage * self.critical_Damage * 0.01
+				criticals[i] = true
+			else
+				criticals[i] = false
+			end
+			
+			damages[i] = damage	
+			totalDamage += damage
+		end
+		
+		return totalDamage
+	end
+
+	method boolean IsCritical()
+		local randomValue = math.random(0, 100)
+		return self.critical >= randomValue
+	end
+
+	@ExecSpace("Client")
+	method void SyncHP()
+		if _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		self.uiInfo:SyncHP()
+	end
+
+	@ExecSpace("Client")
+	method void SyncSP()
+		if _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		self.uiInfo:SyncSP()
+	end
+
+	@ExecSpace("ServerOnly")
+	method boolean UseSP(integer useSP)
+		if self.sp - useSP >= 0 then
+			self.sp -= useSP
+			self:SyncSP(self.Entity.PlayerComponent.UserId)
+			return true
+		end
+		return false
+	end
+
+	@ExecSpace("ServerOnly")
+	method void AutoRestoreStamina()
+		local oldSP = self.sp
+		self.sp += self.restoreSP 
+		if self.sp > self.maxSP then
+			self.sp = self.maxSP
+		end
+		
+		if oldSP ~= self.maxSP then
+			self:SyncSP(self.Entity.PlayerComponent.UserId)	
+		end
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void OnDestroy()
+		_TimerService:ClearTimer(self._T.autoRestoreStaminaTimerHandle)
+	end
+
+	@ExecSpace("Client")
+	method void SendAddExpMsg(integer exp)
+		local event = SystemMsgEvent()
+		event.msg = "+"..exp.." 경험치를 얻었습니다."
+		self.Entity:SendEvent(event)
+		--log("<Client> 얻은 Exp : "..exp)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendLevelUpEvent(OnLevelUp event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void InitAbility()
+		self.defense = self._T.default_Defense
+		self.maxSP = self._T.dafault_MaxSP
+		self.restoreSP = self._T.default_RestoreSP
+		self.Entity.PlayerComponent.MaxHp = self._T.dafault_MaxHP
+		self.critical = self._T.default_Critical
+		self.critical_Damage = self._T.default_Critical_Damage
+		self.power = self._T.default_Power
+		self.skill_Damage = self._T.default_Skill_Damage
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnExpUpdated(OnExpUpdated event)
+		self:AddExp(event.exp)
+		log("보상으로 "..event.exp.." 경험치를 받았습니다. 현재:"..self.exp)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnMonsterKill(OnMonsterKill event)
+		-- Parameters
+		 local mobId = event.mobId
+		---------------------------------------------------------
+		local mob = _GlobalData:GetMonster(mobId)
+		if mob == nil then
+			return
+		end
+		
+		self:AddExp(mob.exp)
+		self:SendAddExpMsg(mob.exp,self.Entity.PlayerComponent.UserId)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnEquipItem(OnEquipItem event)
+		-- Parameters
+		local inventoryIndex = event.inventoryIndex
+		local itemId = event.itemId
+		local willEquip = event.willEquip
+		local part = event.part
+		if willEquip == false then
+			self:InitAbility()
+		else 
+			---------------------------------------------------------
+			local playerEquipment = self.Entity.PlayerEquipmentComponent
+			local playerInventory = self.Entity.PlayerInventory
+			
+			---@type EquipmentItemStruct
+			local equipPart = playerEquipment.equipTable[part]
+			local equipment = _GlobalData:GetEquipmentItem(itemId)
+			--equipment.partType
+			local rating = equipment.rating
+			
+			---@type EquipmentAbilityInfo
+			local equipmentAbilityInfo = _GlobalData:GetWeaponLevelAbility(rating,equipPart.level)
+			log("이전 power = "..self.power)
+			self.power = self._T.default_Power + equipmentAbilityInfo.power
+			log("장착 후 power = "..self.power)
+			self.defense = self._T.default_Defense + equipmentAbilityInfo.defense
+			self.maxSP = self._T.dafault_MaxSP + equipmentAbilityInfo.sp
+			self.restoreSP = self._T.default_RestoreSP + equipmentAbilityInfo.restoreSP
+			self.Entity.PlayerComponent.MaxHp = self._T.dafault_MaxHP + equipmentAbilityInfo.hp
+			self.critical = self._T.default_Critical + equipmentAbilityInfo.critical
+			self.critical_Damage = self._T.default_Critical_Damage + equipmentAbilityInfo.critical_Damage
+			self.skill_Damage = self._T.default_Skill_Damage + equipmentAbilityInfo.skill_Damage
+		end
+		
+		self:SyncHP(self.Entity.PlayerComponent.UserId)
+		self:SyncSP(self.Entity.PlayerComponent.UserId)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleHitEvent(HitEvent event)
+		self:SyncHP(self.Entity.PlayerComponent.UserId)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnLevelUp(OnLevelUp event)
+		_EffectService:PlayEffectAttached("8a7dcd075cb446569ddde73b8b651e5d",self.Entity,Vector3(0.0,1.5,0.0),0.0,Vector3.one)
+		_SoundService:PlaySound("dd47946756f341538f6874dbfc4ce340",1)
+	end
+
+end

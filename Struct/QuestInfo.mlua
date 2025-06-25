@@ -1,0 +1,245 @@
+@Struct
+script QuestInfo
+
+	property string id = ""
+
+	@Description("<int,UserDataRow(QuestId)>")
+	property table scripts = {}
+
+	property string title = ""
+
+	@Description("<int,string>")
+	property table startNpcPathTable = {}
+
+	@Description("<int,string>")
+	property table endNpcPathTable = {}
+
+	@Description("<int,string>")
+	property table requiredQuestIDTable = {}
+
+	property table questType = {}
+
+	property table entryPoint = {}
+
+	property table questReward = {}
+
+	property table conditions = {}
+
+	property string group = ""
+
+	property string npcImageRuid = ""
+
+	property string summation = ""
+
+	property string desc = ""
+
+	method void SetScript(string questId)
+		self.id = questId
+		self.title = _DataService:GetTable("QuestTable"):FindRow("id",self.id):GetItem("title")
+		self.npcImageRuid = _DataService:GetTable("QuestTable"):FindRow("id",self.id):GetItem("npcimage")
+		self.summation = _DataService:GetTable("QuestTable"):FindRow("id",self.id):GetItem("summation")
+		self.desc = _DataService:GetTable("QuestTable"):FindRow("id",self.id):GetItem("desc")
+		local questScript = _DataService:GetTable(self.id)
+		
+		local commandLineCnt = 0
+		for i = 1, questScript:GetRowCount() do
+		    local strScript = questScript:GetRow(i):GetItem("name")
+			  local commandScript = _UtilLogic:Split(strScript,' ')
+		    if commandScript[1] ~= '\\' then
+		        break
+		    end
+		    self:StartCommandRead(commandScript)
+			commandLineCnt += 1	
+		end
+		
+		for i = 1 + commandLineCnt, questScript:GetRowCount() do
+			self.scripts[i - commandLineCnt] = questScript:GetRow(i)
+		end
+		
+	end
+
+	method void StartCommandRead(table splitScript)
+		local cmdPadding = 2
+		local cmdPaddingNext = 3
+		if splitScript[cmdPadding] == 'path' then
+			self:QuestAcceptAndFinishNpcLoad(splitScript,cmdPaddingNext) -- splitScript 테이블의 인덱스
+		elseif splitScript[cmdPadding] == 'required' then
+			self:CreateRequiredQuestID(splitScript, cmdPaddingNext)
+		elseif splitScript[cmdPadding] == 'type' then
+			self:CreateQuestType(splitScript,cmdPaddingNext)
+		elseif splitScript[cmdPadding] == 'step' then
+			self:CreateEntryPoint(splitScript,cmdPaddingNext)
+		elseif splitScript[cmdPadding] == 'gift' then
+		    self:CreateReward(splitScript,cmdPaddingNext)
+		elseif splitScript[cmdPadding] == 'condition' then
+		    self:CreateCondition(splitScript,cmdPaddingNext)
+		elseif splitScript[cmdPadding] == 'group' then
+		    self:CreateGroup(splitScript,cmdPaddingNext)
+		end
+	end
+
+	method integer QuestAcceptAndFinishNpcLoad(table splitScript, integer index)
+		local i = index
+		while (i < #splitScript)
+		do
+			if splitScript[i] == "start" then
+				i += 1
+				local startNpcPaths = _UtilLogic:Split(splitScript[i],',')
+				self.startNpcPathTable = startNpcPaths
+			end
+			
+			if splitScript[i] == "end" then
+				i += 1
+				local endNpcPaths = _UtilLogic:Split(splitScript[i],',')
+				self.endNpcPathTable = endNpcPaths
+			end
+		
+			i += 1
+		end
+		
+		if self.startNpcPathTable == nil then
+			log("[Error] not self.startNpcPathTable")
+		end
+		
+		if self.endNpcPathTable == nil then
+			log("[Error] not self.endNpcPathTable")
+		end
+		
+		return i - 1 
+	end
+
+	method boolean CheckNPCPathExists(string npcPath, boolean isStartPath)
+		-- isStartPath 가 false면 endNpc를 찾아야함.
+		
+		if isStartPath then
+			for i = 1, #self.startNpcPathTable do
+				if self.startNpcPathTable[i] == npcPath then
+					return true
+				end 
+			end
+			return false
+		else
+			for i = 1, #self.endNpcPathTable do
+				if self.endNpcPathTable[i] == npcPath then
+					return true
+				end 
+			end
+			return false
+		end 
+	end
+
+	method void CreateRequiredQuestID(table splitScript, integer index)
+		if splitScript[index] == nil then
+			return
+		end
+		self.requiredQuestIDTable = _UtilLogic:Split(splitScript[index],",")
+	end
+
+	method table GetRequiredQuestIDTable()
+		return self.requiredQuestIDTable
+	end
+
+	method void CreateQuestType(table splitScript, integer index)
+		local typeTable = _UtilLogic:Split(splitScript[index],",")
+		
+		for _ , type in ipairs(typeTable) do
+			self.questType[type] = true
+		end
+		
+	end
+
+	method void CreateEntryPoint(table splitScript, integer index)
+		local entryPointTable = _UtilLogic:Split(splitScript[index],",")
+		
+		if #entryPointTable == 1 then
+			local entry = _UtilLogic:Split(entryPointTable[1],':')
+			self.entryPoint[self.startNpcPathTable[1]] = {}
+			self.entryPoint[self.startNpcPathTable[1]]["wait"] = tonumber(entry[1])
+			self.entryPoint[self.startNpcPathTable[1]]["accept"] = tonumber(entry[2])
+			self.entryPoint[self.startNpcPathTable[1]]["finish"] = tonumber(entry[3])
+		else
+			for _,str in ipairs(entryPointTable) do
+				local entry = _UtilLogic:Split(str,':')
+				self.entryPoint[entry[1]] = {}
+				self.entryPoint[entry[1]]["wait"] = tonumber(entry[2])
+				self.entryPoint[entry[1]]["accept"] = tonumber(entry[3])
+				self.entryPoint[entry[1]]["finish"] = tonumber(entry[4])
+			end
+		end
+		
+	end
+
+	method integer GetEntryPoint(integer progress, string entityPath)
+		local page = self.entryPoint[entityPath]
+		
+		if page == nil then
+			return 1 
+		end
+		
+		if progress == 0 then
+			page = self.entryPoint[entityPath]["wait"]
+		elseif progress == 1 then
+			page = self.entryPoint[entityPath]["accept"]
+		elseif progress == 2 then
+			page = self.entryPoint[entityPath]["finish"]
+		end
+		
+		
+		return page
+	end
+
+	method void CreateReward(table splitScript, integer index)
+		local rewards = _UtilLogic:Split(splitScript[index],",")
+		-- [exp:10,item:3:5]
+		
+		local i = 1
+		while i <= #rewards
+		do
+			local reward = _UtilLogic:Split(rewards[i],":")
+			if reward[1] == "exp" then
+				self.questReward["exp"] = tonumber(reward[2])
+			elseif reward[1] == "item" then
+				if self.questReward["item"] == nil then
+					self.questReward["item"] = {}
+				end
+				self.questReward["item"][tonumber(reward[2])] = tonumber(reward[3])
+			end
+			i += 1
+		end
+		
+		--for key,value in pairs(self.questReward["item"]) do
+		--    log(key..":"..value)
+		--end
+	end
+
+	method void CreateCondition(table splitScript, integer index)
+		--\ condition kill:1:2,item:5:2
+		local conditionTable = _UtilLogic:Split(splitScript[index],',')
+		
+		for i,condition in ipairs(conditionTable) do
+			local split_condition = _UtilLogic:Split(condition,':')
+			local type = split_condition[1]
+			
+			if self.conditions[type] == nil then
+				self.conditions[type] = {}
+			end
+			
+			if type == "kill" then
+				local mob_Id = split_condition[2]
+				local killCount = split_condition[3]
+				self.conditions[type][mob_Id] = tonumber(killCount)
+			elseif type == "item" then
+				local item_Id = split_condition[2]
+				local itemCount = split_condition[3]
+				self.conditions[type][item_Id] = tonumber(itemCount)
+			end
+			
+		end
+		
+	end
+
+	method void CreateGroup(table splitScript, integer index)
+		self.group = splitScript[index]
+	end
+
+end

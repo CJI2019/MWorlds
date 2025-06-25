@@ -1,0 +1,6 @@
+@Event
+script OnQuestHelp extends EventType
+
+	property string questId = ""
+
+end

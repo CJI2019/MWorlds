@@ -1,0 +1,42 @@
+@Struct
+script ItemStruct
+
+	property integer itemId = 0
+
+	property integer count = 0
+
+	property integer inventoryIndex = 0
+
+	method boolean Use(EntityRef entity)
+		if self.itemId == 0 then
+			log("사용할 아이템이 없습니다.")
+			return
+		end
+		log(_GlobalData:GetItem(tostring(self.itemId)).name.."는 사용불가능한 아이템입니다.")
+		return false
+	end
+
+	method ItemStruct SetItemId(integer id)
+		self.itemId = id
+		return self
+	end
+
+	method ItemStruct SetInventoryIndex(integer index)
+		self.inventoryIndex = index
+		return self
+	end
+
+	method ItemStruct SetCount(integer count)
+		self.count = count
+		return self
+	end
+
+	method boolean IsConsumable()
+		return false
+	end
+
+	method boolean IsIncludeAbility()
+		return false
+	end
+
+end

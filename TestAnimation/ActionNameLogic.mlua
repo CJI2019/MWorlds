@@ -1,0 +1,51 @@
+@Logic
+script ActionNameLogic extends Logic
+
+	property table AttackActionType_OneHand_Names = {}
+
+	property table AttackActionType_TwoHand_Names = {}
+
+	property table AttackActionType_StaffWand_Names = {}
+
+	property table AttackActionType_Bow_Names = {}
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		    self.AttackActionType_OneHand_Names = {"swingO1","swingO2","swingO3","stabO1","stabO2"}
+		    self.AttackActionType_TwoHand_Names = {"swingT1","swingT2","swingT3","stabO1","stabO2"}
+		    self.AttackActionType_StaffWand_Names = {"swingO2", "swingO1","swingO3"}
+		    self.AttackActionType_Bow_Names = {"alert"}
+	end
+
+	@ExecSpace("ClientOnly")
+	method string GetRandomButValidName(table randomNameTable)
+		    local index = _UtilLogic:RandomIntegerRange(1, #randomNameTable)
+		    return randomNameTable[index]
+	end
+
+	@ExecSpace("ClientOnly")
+	method ActionNameStruct GetActionNameDatas(string dataID)
+		    local randomName =""
+		
+		    if dataID == "sword" or dataID == "dagger"   then
+		    	randomName = self:GetRandomButValidName(self.AttackActionType_OneHand_Names)	
+		    	return ActionNameStruct(randomName, randomName)
+		
+		    elseif dataID == "bow" then
+		    	randomName = self:GetRandomButValidName(self.AttackActionType_Bow_Names)	
+		    	return ActionNameStruct(randomName, randomName)
+		
+		    elseif dataID == "staff" or dataID == "wand" then
+		    	randomName = self:GetRandomButValidName(self.AttackActionType_StaffWand_Names)	
+		    	return ActionNameStruct(randomName, randomName)
+		
+		    elseif dataID == "hammer" then
+		    	randomName = self:GetRandomButValidName(self.AttackActionType_TwoHand_Names)	
+		    	return ActionNameStruct(randomName, randomName)
+		    else
+		    	log_warning("dataID invalid")
+		    	return nil
+		    end
+	end
+
+end

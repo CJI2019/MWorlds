@@ -1,0 +1,366 @@
+@Component
+script UserQuestManager extends Component
+
+	property table progress_Dict = {}
+
+	property table condition_Dict = {}
+
+	property table itemQuest_Dict = {}
+
+	property table killQuest_Dict = {}
+
+	property table helpQuestList = {}
+
+	method void SetProgress(string questId, integer progress)
+		self.progress_Dict[questId] = progress
+	end
+
+	method integer GetProgress(string questId)
+		return self.progress_Dict[questId]
+	end
+
+	@ExecSpace("Multicast")
+	method void SetKillCondition(string questId, integer mob_Id, integer complete, integer current)
+		if self.condition_Dict[questId] == nil then
+			self.condition_Dict[questId] = {}
+		end
+		
+		if self.condition_Dict[questId]["kill"] == nil then
+			self.condition_Dict[questId]["kill"] = {}
+		end
+		
+		if self.condition_Dict[questId]["kill"][mob_Id] == nil then
+			self.condition_Dict[questId]["kill"][mob_Id] = {
+				complete = complete,
+				current = current
+			}
+		end
+		
+		if self.killQuest_Dict[mob_Id] == nil then
+			self.killQuest_Dict[mob_Id] = {}
+		end
+		
+		self.killQuest_Dict[mob_Id][questId] = true
+	end
+
+	@ExecSpace("Multicast")
+	method void SetItemCondition(string questId, integer item_Id, integer complete, integer current)
+		if self.condition_Dict[questId] == nil then
+			self.condition_Dict[questId] = {}
+		end
+		
+		if self.condition_Dict[questId]["item"] == nil then
+			self.condition_Dict[questId]["item"] = {}
+		end
+		
+		if self.condition_Dict[questId]["item"][item_Id] == nil then
+			self.condition_Dict[questId]["item"][item_Id] = {
+				complete = complete,
+				current = current
+			}
+		end
+		
+		if self.itemQuest_Dict[item_Id] == nil then
+			self.itemQuest_Dict[item_Id] = {}
+		end
+		
+		self.itemQuest_Dict[item_Id][questId] = true
+	end
+
+	@ExecSpace("ServerOnly")
+	method boolean IsComplete(string questId)
+		if self.condition_Dict[questId]["kill"] ~= nil then
+			for _,kill in pairs(self.condition_Dict[questId]["kill"]) do
+				if kill["complete"] > kill["current"] then
+					return false
+				end
+			end
+		end
+		
+		if self.condition_Dict[questId]["item"] ~= nil then
+			for _,item in pairs(self.condition_Dict[questId]["item"]) do
+				if item["complete"] > item["current"] then
+					-- 아이템은 유저가 버리거나 갯수를 변경할 수 있는 요소이다.
+					if self.progress_Dict[questId] == 2 then
+						local event = OnQuestProgressModify()
+						event.questId = questId
+						event.progress = 1
+						self.Entity.PlayerQuestComponent:QuestProgressModifyEvent(event)
+					end
+					
+					return false
+				end
+			end
+		end
+		
+		if self.progress_Dict[questId] ~= 2 then
+			local event = OnQuestProgressModify()
+			event.questId = questId
+			event.progress = 2
+			self.Entity.PlayerQuestComponent:QuestProgressModifyEvent(event)
+		end
+		
+		return true
+	end
+
+	method void DeleteQuest(string questId)
+		if self.condition_Dict[questId]["kill"] ~= nil then
+			local deleteTable = {}
+			for mob_Id,_ in pairs(self.condition_Dict[questId]["kill"]) do
+				self.killQuest_Dict[mob_Id][questId] = nil
+				
+				if next(self.killQuest_Dict[mob_Id]) == nil then
+			    	self.killQuest_Dict[mob_Id] = nil
+				end
+			end
+		end
+		
+		if self.condition_Dict[questId]["item"] ~= nil then
+			for item_Id,_ in pairs(self.condition_Dict[questId]["item"]) do
+				self.itemQuest_Dict[item_Id][questId] = nil
+				
+				if next(self.itemQuest_Dict[item_Id]) == nil then
+			    	self.itemQuest_Dict[item_Id] = nil
+				end
+			end
+		end
+		
+		-- 최종적으로 퀘스트조건 정보 nil 처리
+		self.condition_Dict[questId] = nil
+	end
+
+	method table GetQuestGroups(string group)
+		local groups = {}
+		for questId,_ in pairs(self.condition_Dict) do
+			if _QuestManager:GetQuestGroup(questId) == group then
+				table.insert(groups, questId)
+			end
+		end
+		
+		return groups
+	end
+
+	@ExecSpace("Multicast")
+	method void SetConversationQuest(string questId)
+		self.condition_Dict[questId] = "valid"
+	end
+
+	@ExecSpace("Client")
+	method void ClientAcceptQuest(string questId)
+		_QuestManager:SetUserQuestCondition(questId,_UserService.LocalPlayer)
+	end
+
+	@ExecSpace("Client")
+	method void ClientCompleteQuest(string questId)
+		--log("Clear")
+		self:DeleteQuest(questId)
+		local complete = OnQuestComplete()
+		complete.questId = questId
+		self.Entity:SendEvent(complete)
+	end
+
+	method QuestCondition GetQuestCondition(string questId)
+		if self.condition_Dict[questId] == nil then
+		    --log(questId.."is nil : "..self.progress_Dict[questId])
+			return nil
+		end
+		--self.condition_Dict[questId]["item"][item_Id] = {
+		--        complete = count,
+		--        current = 0
+		--    }
+		local condition = QuestCondition()
+		if self.condition_Dict[questId]["kill"] ~= nil then
+			for mob_Id,mob_Condition in pairs(self.condition_Dict[questId]["kill"]) do
+				condition.killTable[mob_Id] = mob_Condition
+			end
+		end
+		
+		if self.condition_Dict[questId]["item"] ~= nil then
+			for item_Id,item_Condition in pairs(self.condition_Dict[questId]["item"]) do
+				condition.itemTable[item_Id] = item_Condition		
+			end
+		end
+		
+		return condition
+	end
+
+	@ExecSpace("Client")
+	method void ClientQuestConditionModify(table conditions)
+		if _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		
+		self.condition_Dict = conditions
+		
+		for questId,_ in pairs(self.condition_Dict) do
+			local condition = QuestCondition()
+			if self.condition_Dict[questId]["kill"] ~= nil then
+				for mob_Id,mob_Condition in pairs(self.condition_Dict[questId]["kill"]) do
+					condition.killTable[mob_Id] = mob_Condition
+				end
+			end
+			
+			if self.condition_Dict[questId]["item"] ~= nil then
+				for item_Id,item_Condition in pairs(self.condition_Dict[questId]["item"]) do
+					condition.itemTable[item_Id] = item_Condition
+				end
+			end
+		end
+		
+		local questEvent = OnQuestConditionModify()
+		self.Entity:SendEvent(questEvent)
+	end
+
+	@ExecSpace("Server")
+	method void SetQuestHelperList(table list)
+		if list == nil then
+			return
+		end
+		
+		if #list > 3 then
+			return
+		end
+		
+		self.helpQuestList = {}
+		for i, key in ipairs(list) do
+			self.helpQuestList[key] = i
+			local event = OnQuestHelp()
+			event.questId = key
+			self:ClientSetQuestHelperList(event)
+		end
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method table GetQuestHelperList()
+		return self.helpQuestList
+	end
+
+	@ExecSpace("Client")
+	method void ClientSetQuestHelperList(OnQuestHelp event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SyncQuestConditionTimer(boolean isChanged)
+		if self._T.ClientQuestConditionModifyFunction == nil and isChanged then
+		    self._T.ClientQuestConditionModifyFunction = function()
+		        self._T.ClientQuestConditionModifyFunction = nil
+		        self:ClientQuestConditionModify(self.condition_Dict,self.Entity.PlayerComponent.UserId)
+		    end
+		
+		    _TimerService:SetTimerOnce(self._T.ClientQuestConditionModifyFunction,0.2)
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnInventoryModified(OnInventoryModified event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		--local invIndex_Table = event.invIndex_Table
+		--local itemCount_Table = event.itemCount_Table
+		local total_ItemCount = event.total_ItemCount
+		---------------------------------------------------------
+		
+		if self.itemQuest_Dict[itemIndex] == nil then
+		    return
+		end
+		
+		for questId,_ in pairs(self.itemQuest_Dict[itemIndex]) do
+			self.condition_Dict[questId]["item"][itemIndex]["current"] = total_ItemCount
+			if self:IsComplete(questId) then
+				--log("완료")
+				--self.condition_Dict[questId] = nil
+			end
+			--log(questId.."퀘스트의 아이템을 획득 개수 : "..self.condition_Dict[questId]["item"][itemIndex]["current"])
+		end
+		
+		self:SyncQuestConditionTimer(true)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnMonsterKill(OnMonsterKill event)
+		-- Parameters
+		 local mobId = tonumber(event.mobId)
+		---------------------------------------------------------
+		if self.killQuest_Dict[mobId] == nil then
+			return
+		end
+		
+		for questId,_ in pairs(self.killQuest_Dict[mobId]) do
+			if self.condition_Dict[questId]["kill"][mobId]["complete"] <= self.condition_Dict[questId]["kill"][mobId]["current"] then
+				continue
+			end
+			
+			self.condition_Dict[questId]["kill"][mobId]["current"] += 1
+			
+			if self:IsComplete(questId) then
+				-- 테이블에 완료 퀘스트를 넣어두고 모든 퀘스트 처리 후 완료된 퀘스트 삭제
+				-- 여기선 퀘스트 완료 알림창을 띄우도록 이벤트 호출하는 역할만함.
+			end
+		    log(questId.."퀘스트의 몬스터를 사냥한 횟수 : "..self.condition_Dict[questId]["kill"][mobId]["current"])
+		end
+		
+		if self._T.ClientQuestConditionModifyFunction == nil then
+			self._T.ClientQuestConditionModifyFunction = function()
+				self:ClientQuestConditionModify(self.condition_Dict)
+				self._T.ClientQuestConditionModifyFunction = nil
+			end
+		
+			_TimerService:SetTimerOnce(self._T.ClientQuestConditionModifyFunction,0.2)
+		end
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnQuestComplete(OnQuestComplete event)
+		-- Parameters
+		local questId = event.questId
+		---------------------------------------------------------
+		if self.condition_Dict[questId] == nil then
+			return
+		end
+		
+		if self.condition_Dict[questId]["item"] ~= nil then
+			for item_Id,item in pairs(self.condition_Dict[questId]["item"]) do
+				self.Entity.PlayerInventory:ModifyItem(item_Id, -item["complete"])
+			end
+		end
+		
+		self:DeleteQuest(questId)
+		self:ClientCompleteQuest(questId,self.Entity.PlayerComponent.UserId)
+	end
+
+	@EventSender("Self")
+	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
+		-- Parameters
+		local questId = event.questId
+		local progress = event.progress
+		---------------------------------------------------------
+		self:SetProgress(questId,progress)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnInventoryItemRemoved(OnInventorySlotItemRemoved event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		local inventoryIndex = event.inventoryIndex
+		---------------------------------------------------------
+		if self.itemQuest_Dict[itemIndex] == nil then
+			return
+		end
+		local itemTotalCount = self.Entity.PlayerInventory:GetItemCount(itemIndex)
+		for questId,_ in pairs(self.itemQuest_Dict[itemIndex]) do
+		    self.condition_Dict[questId]["item"][itemIndex]["current"] = itemTotalCount
+		    if self:IsComplete(questId) then
+		    end
+		end
+		
+		self:SyncQuestConditionTimer(true)
+	end
+
+end

@@ -1,0 +1,117 @@
+@Component
+script MonsterSpriteAlphaAnimationComponent extends Component
+
+	property SpriteRendererComponentRef spriteRenderer = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.Enable = false
+		self.spriteRenderer = self.Entity.SpriteRendererComponent
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		if self._T.increaseAlpha == true then
+			self.spriteRenderer.Color.a += delta
+		
+			if self.spriteRenderer.Color.a >= 1.0 then
+				self.spriteRenderer.Color.a = 1.0
+				self.Enable = false
+			end
+		else	
+			self.spriteRenderer.Color.a -= delta * 2
+		
+			if self.spriteRenderer.Color.a <= 0.0 then
+				self:DeadAnimationFinish()
+			end
+		end
+		
+	end
+
+	method void DeadAnimationStart()
+		self._T.endFrameEventHandler = self.Entity:ConnectEvent(SpriteAnimPlayerEndFrameEvent,self.DeadAnimationLastFrame)
+	end
+
+	method void DeadAnimationFinish()
+		self.Entity:SetEnable(false)
+		
+		self.Enable = false
+		self.spriteRenderer.Color.a = 0.0
+		self.Entity.SpriteRendererComponent.PlayRate = self._T.originPlayRate
+		self.Entity.SpriteRendererComponent.StartFrameIndex = 0
+	end
+
+	@ExecSpace("ClientOnly")
+	method void DeadAnimationLastFrame(SpriteAnimPlayerEndFrameEvent event)
+		self.Entity:DisconnectEvent(SpriteAnimPlayerEndFrameEvent,self._T.endFrameEventHandler)
+		
+		self._T.originPlayRate = self.Entity.SpriteRendererComponent.PlayRate
+		self.Entity.SpriteRendererComponent.PlayRate = 0
+		self.Entity.SpriteRendererComponent.StartFrameIndex = 99999999
+		
+		self._T.increaseAlpha = false
+		self.spriteRenderer.Color.a = 1.0
+		self.Enable = true
+		
+		local monster = self.Entity.Monster
+		if monster.RespawnOn == false then
+		    monster:SelfDelete()
+			return
+		end
+	end
+
+	method number GetRUIDTime(string ruid)
+		if _UtilLogic:IsNilorEmptyString(ruid) then
+			return 0
+		end
+		 
+		    local time = 0
+		    local clip = _ResourceService:LoadAnimationClipAndWait(ruid)
+		    if clip == nil then
+		        return 0
+		    end
+		
+		    for i = 1,#clip.Frames - 2 do
+		        time = time + clip.Frames[i].Delay
+		    end
+		 
+		return time
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleStateChangeEvent(StateChangeEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: StateComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local CurrentStateName = event.CurrentStateName
+		-- local PrevStateName = event.PrevStateName
+		---------------------------------------------------------
+		
+		if CurrentStateName == "DEAD2" then
+		    self:DeadAnimationStart()
+		end
+	end
+
+	@EventSender("Self")
+	handler HandleEntityEnabledInHierarchyChangedEvent(EntityEnabledInHierarchyChangedEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: MODEntity
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local enabledInHierarchy = event.EnabledInHierarchy
+		-- local Entity = event.Entity
+		---------------------------------------------------------
+		
+		if enabledInHierarchy == true then
+			self._T.increaseAlpha = true
+			self.Enable = true
+		end
+	end
+
+end

@@ -1,0 +1,124 @@
+@Component
+script PlayerEnchantComponent extends Component
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		
+	end
+
+	@ExecSpace("Server")
+	method void RequestEnchant(integer inventoryIndex)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		
+		local item_Struct = self.Entity.PlayerInventory:GetItem(inventoryIndex)
+		if item_Struct == nil then
+			return
+		end
+		
+		if item_Struct:IsIncludeAbility() == false then
+			return
+		end
+		
+		local playerInventory = self.Entity.PlayerInventory
+		if playerInventory == nil then
+			return
+		end
+		
+		---@type EquipmentItemStruct
+		local equipment_Struct = item_Struct
+		local equipmentInfo = _GlobalData:GetEquipmentItem(equipment_Struct.itemId)
+		if equipmentInfo == nil then
+			return
+		end
+		
+		local cost = _GlobalData:GetEnchantCost(equipment_Struct.level,equipmentInfo.rating)
+		if cost == nil then
+			return
+		end
+		if playerInventory:GetMoney() < cost then
+			self:SendMsgNotEnoughFunds(senderUserId)
+			return
+		end
+		
+		playerInventory:ModifyMoney(-cost)
+		
+		-- equipment_Struct.level에 따른 강화 확률
+		local successProbability = _GlobalData:GetEnchantProbability(equipment_Struct.level)
+		if successProbability == nil or successProbability < 0 or successProbability > 100 then
+			return
+		end
+		local result = math.random() * 100
+		--log("성공확률 : "..successProbability.." 결과 : "..result)
+		local resultEvent = OnEnchantResult()
+		
+		if result <= successProbability then
+			resultEvent.result = 1
+			
+			equipment_Struct.level += 1
+			--log(equipment_Struct.level.."레벨로 상승했습니다.")
+			
+			local event = SyncItemAbilityData()
+			table.insert(event.inventoryIndex_Table,inventoryIndex)
+			table.insert(event.itemLevels,equipment_Struct.level)
+			if equipment_Struct:IsWeapon() then
+				table.insert(event.skillIds,{
+					skillZ = equipment_Struct.skillZ,
+					skillX = equipment_Struct.skillX
+				})
+			end
+			self.Entity.PlayerInventory:SendItemAbilityDataEvent(event)
+		
+		else
+			resultEvent.result = 0
+		end
+		self:SendEnchantResultEvent(resultEvent)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendEnchantResultEvent(OnEnchantResult event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("Client")
+	method void SendMsgNotEnoughFunds()
+		if _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		
+		local event = SystemMsgEvent()
+		event.msg = "메소가 충분하지 않습니다."
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void ProbabilityTest()
+		local s = 0
+		local f = 0
+		for i = 1, 100 do
+		    local re = math.random() * 100
+		    local p = 10.5
+		    if re <= p then
+		        s += 1
+		    else
+		        f += 1
+		    end
+		end
+		--log("성공 : "..s.." 실패 : "..f)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnEnchantResult(OnEnchantResult event)
+		-- Parameters
+		local result = event.result
+		---------------------------------------------------------
+		if result == "s" then
+		    _EffectService:PlayEffectAttached("21e2cab26eb3484facebfda3b6a631e9",self.Entity,Vector3(0.0,0.8,0.0),0.0,Vector3.one,false,{PlayRate = 1.5})
+		elseif result == "f" then
+			_EffectService:PlayEffectAttached("404534c6e5aa4998af01c1bd284ae609",self.Entity,Vector3(0.0,0.8,0.0),0.0,Vector3.one,false,{PlayRate = 1.5})
+		end
+	end
+
+end

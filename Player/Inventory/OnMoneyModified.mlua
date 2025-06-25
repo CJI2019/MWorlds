@@ -1,0 +1,6 @@
+@Event
+script OnMoneyModified extends EventType
+
+	property integer money_value = 0
+
+end

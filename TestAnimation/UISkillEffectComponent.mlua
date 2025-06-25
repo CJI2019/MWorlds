@@ -1,0 +1,62 @@
+@Component
+script UISkillEffectComponent extends Component
+
+	property SpriteGUIRendererComponentRef RendererComponentRef = nil
+
+	property Vector2 OriginalPosition = Vector2(0,0)
+
+	property any SkillDataStruct = nil
+
+	property number ActivatedTimerID = 0
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		if self.Entity.SpriteGUIRendererComponent == nil then 
+		    	log_error("skill dosen't have SpriteGUIRendererComponent")
+		end
+		
+		self.RendererComponentRef = self.Entity.SpriteGUIRendererComponent
+		
+		    if self.RendererComponentRef ~= nil then
+		    	self.RendererComponentRef.Enable = false
+		    end
+		
+		    self.OriginalPosition = self.Entity.UITransformComponent.anchoredPosition
+	end
+
+	@ExecSpace("ClientOnly")
+	method void PlaySkill()
+		if self.SkillDataStruct == nil then 
+		    	log_error("invalid data, set valid skill first") 
+		    	return 
+		    end
+		
+		    if self.ActivatedTimerID ~= -1 then
+		    	_TimerService:ClearTimer(self.ActivatedTimerID)
+		    	self.ActivatedTimerID = -1
+		    end
+		
+		    _TimerService:SetTimerOnce(function() 
+		
+			self.Entity.UITransformComponent.anchoredPosition = self.OriginalPosition + self.SkillDataStruct.SkillOffset     		
+			self.RendererComponentRef.Enable = true
+			self.RendererComponentRef.ImageRUID = self.SkillDataStruct.SkillRUID
+		
+			wait(0.1) 
+		
+			self.RendererComponentRef.LocalScale = Vector2.one * 3 
+		
+			self.ActivatedTimerID = _TimerService:SetTimerOnce(function () 
+					self.RendererComponentRef.ImageRUID = nil
+					self.RendererComponentRef.Enable = false 
+				end, 1)
+		
+		    end, self.SkillDataStruct.SkillDelay)
+		log("skill")
+	end
+
+	method void SetSkill(SkillDataStruct skillData)
+		self.SkillDataStruct = skillData
+	end
+
+end

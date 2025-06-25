@@ -1,0 +1,8 @@
+@Struct
+script QuestCondition
+
+	property table killTable = {}
+
+	property table itemTable = {}
+
+end

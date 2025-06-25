@@ -1,0 +1,88 @@
+@Component
+script MonsterManageComponent extends Component
+
+	property SyncTable<EntityRef> MonsterList
+
+	property boolean isActive = false
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		local childs =self.Entity.Children
+		
+		for index, child in pairs(childs) do
+			self.MonsterList[index] = child
+		    --log(self.MonsterList[index].Name,"이 복사되었습니다.")
+			self.MonsterList[index].Enable = false
+			child:ConnectEvent(OnMonsterDead,self.RespawnMonster)
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnMapEnter(Entity enteredMap)
+		--log("맵에 들어옴",enteredMap.Name)
+		self:MapEnterServerUpdate(true)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnMapLeave(Entity leftMap)
+		--log("맵에서 나감",leftMap.Name)
+		self:MapEnterServerUpdate(false)
+	end
+
+	@ExecSpace("Server")
+	method void MapEnterServerUpdate(boolean isEnter)
+		-- self.Entity == MonsterList
+		local users = _UserService:GetUsersByMapComponent(self.Entity.CurrentMap.MapComponent)
+		
+		if #users ~= 0 and isEnter then
+			if self.isActive then
+				return
+			end
+			self.isActive = true
+			for index, child in pairs(self.MonsterList) do
+				child.Enable = true
+				if nil ~= child.MonsterAttack then
+					child.MonsterAttack:AttackTimerReserve()			
+				end
+			end
+		
+			return
+		end
+		
+		if #users == 0 and isEnter == false then
+			if self.isActive == false then
+				return
+			end
+			self.isActive = false
+			for index, child in pairs(self.MonsterList) do
+				child.Enable = false
+				if nil ~= child.MonsterAttack then
+					child.MonsterAttack:AttackTimerClear()
+				end
+			end
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	method void RespawnMonster(OnMonsterDead event)
+		local monster = event.monster.Monster
+		
+		if monster.RespawnOn == false then
+			return
+		end
+		
+		local timerFunc = function() 
+			monster:Respawn() 
+			
+			if self.isActive == false then
+				monster.Enable = false
+				if nil ~= event.monster.MonsterAttack then
+					event.monster.MonsterAttack:AttackTimerClear()
+				end
+			end
+		end
+		
+		_TimerService:SetTimerOnce(timerFunc, monster.RespawnDelay)
+	end
+
+end

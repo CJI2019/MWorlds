@@ -1,0 +1,43 @@
+@Component
+script MonsterNameTagComponent extends NameTagComponent
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		local monster_Id = self.Entity.Monster.monster_table_num
+		local monsterInfo = _GlobalData:GetMonsterBeginPlay(tostring(monster_Id))
+		self.Name = monsterInfo.name
+		
+		self.Enable = false
+	end
+
+	@ExecSpace("Client")
+	method void SetActive(boolean isActive)
+		
+		if isActive and self.Enable then
+			return
+		end
+		
+		self:InitNameTag()
+		local levelDiff = self.Entity.Monster:GetLevel() - _UserService.LocalPlayer.AbilityComponent.level
+		if levelDiff > 10 then
+			self.FontColor.r = 1.0
+			self.FontColor.g = 0.0
+			self.FontColor.b = 0.0
+		elseif levelDiff < -10 then
+			self.FontColor.r = 0.0
+			self.FontColor.g = 1.0
+			self.FontColor.b = 0.0
+		end
+		
+		self.Enable = isActive
+	end
+
+	method void InitNameTag()
+		self.FontColor.r = 1.0
+		self.FontColor.g = 1.0
+		self.FontColor.b = 1.0
+		
+		self.Enable = false
+	end
+
+end

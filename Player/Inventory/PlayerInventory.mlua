@@ -1,0 +1,644 @@
+@Component
+script PlayerInventory extends Component
+
+	@Sync
+	property boolean IsInitialized = false
+
+	property integer MaxInventorySlot = 52
+
+	property integer money = 0
+
+	property integer slot_Capacity = 300
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		-- inventoryData에 ItemDataTable를 불러옴
+		
+		self._T.inventoryData = {}
+		self._T.inventoryindex_Dict = {} -- [i1(아이템번호) : 인벤토리번호,...]
+		self.money = 0
+		
+		for i = 1, self.MaxInventorySlot do
+			self._T.inventoryData[i] = ItemStruct()
+		end
+		
+		local userDataStorage = _DataStorageService:GetUserDataStorage(self.Entity.PlayerComponent.UserId)
+		self._T.userDataStorage = userDataStorage
+		--userDataStorage:DeleteAndWait("ItemData")
+		-- itemData == {0,0,0} == {inventoryIndex/ItemDataTable_Index/count} , 
+		-- itemData ==> {0,0,0} ==> {인벤토리슬롯번호/아이템테이블번호/수량},..
+		local getItemData_Errorcode, itemData = userDataStorage:GetAndWait("ItemData")
+		local getMoneyData_Errorcode, moneyData = userDataStorage:GetAndWait("MoneyData")
+		if getItemData_Errorcode ~= 0 then
+			log("itemdataLoadFail")
+			log(getItemData_Errorcode)
+		    return
+		end
+		if getMoneyData_Errorcode ~= 0 then
+			log("MoneyDataLoadFail")
+			log(getMoneyData_Errorcode)
+		end
+		if moneyData == nil then
+			moneyData = "0"
+		end
+		
+		if self.IsInitialized or itemData == nil then -- 인벤토리 초기화
+			local initEvent = OnInventoryInitialized()
+			self:SendInitializedEvent(initEvent)
+			return
+		end
+		
+		self:UserItemDataDecode(itemData)
+		
+		local initEvent = OnInventoryInitialized()
+		self.money = tonumber(moneyData)
+		initEvent.money_count = self.money
+		
+		for inven_index, item in ipairs(self._T.inventoryData) do
+			---@type ItemStruct
+			local item_struct = item
+		    local itemIndex = item_struct.itemId
+		    local itemAmount = item_struct.count
+			
+			initEvent.SlotItemAmount[inven_index] = itemAmount
+			initEvent.SlotItemIndex[inven_index] = itemIndex
+			
+		    local str_ItemIndex = tostring(itemIndex) -- 1, 2, 3...
+			if self._T.inventoryindex_Dict[str_ItemIndex] == nil then
+				self._T.inventoryindex_Dict[str_ItemIndex] = {}
+			end
+		    table.insert(self._T.inventoryindex_Dict[str_ItemIndex], inven_index)
+		end
+		
+		-- 처음 접속 인벤토리 인덱스 정렬
+		self:AllSortInventoryByItemCount()
+		
+		self:SendInitializedEvent(initEvent)
+		self:GenerateItemAbilityStats()
+		
+		local saveInventory = function()
+			self:SaveInventory(true)
+		    log("AutoSaving...")
+		end
+		    
+		local saveInterval = 300
+		
+		_TimerService:SetTimerRepeat(saveInventory, saveInterval, saveInterval)
+	end
+
+	method void UserItemDataDecode(any itemData)
+		--itemData를 데이터로 바꾸어 inventoryData에 저장한다.
+		--itemArr == [inventoryIndex/ItemDataTable_Index/count],[..],...
+		local itemArr = _UtilLogic:Split(itemData, ",")
+		
+		for i, v in ipairs(itemArr) do
+		    local iteminfo = _UtilLogic:Split(v, "/")
+			---@type integer
+		    local inv_idx = tonumber(iteminfo[1])
+			---@type integer
+		    local item_idx = tonumber(iteminfo[2])
+			---@type integer
+		    local item_cnt = tonumber(iteminfo[3])
+			--dummy(더미테스트) => [cnt], ...
+		    --local inv_idx = i
+		    --local item_idx = i
+		    --local item_cnt = tonumber(v)
+			if item_idx == 0 then
+				continue
+			end
+			
+			---@type ItemInfo
+			local itemInfo = nil
+			while true do
+				itemInfo = _GlobalData:GetItem(tostring(item_idx))
+				if itemInfo == nil then
+					wait(0.5)
+				end
+				break
+			end
+		
+			local item_Struct = ItemStruct()
+			
+			if itemInfo.isUse == 1 then
+				if itemInfo.type == "장비" then
+					item_Struct = EquipmentItemStruct()
+				    local level = tonumber(iteminfo[4])
+				    local type = tonumber(iteminfo[5])
+				    local id_Z = tonumber(iteminfo[6])
+		            --local level_Z = tonumber(iteminfo[7])
+					local id_X = tonumber(iteminfo[7])
+		            --local level_X = tonumber(iteminfo[9])
+				    local isEquiped = iteminfo[8]
+					item_Struct.level = level
+					item_Struct.type = type
+					item_Struct.skillZ["id"] = id_Z
+		            --item_Struct.skillZ["level"] = level_Z
+					item_Struct.skillX["id"] = id_X
+		            --item_Struct.skillX["level"] = level_X
+		            item_Struct.isEquiped = isEquiped == "1" and true or false
+		
+		            if item_Struct.isEquiped then
+						local equipFunc = function()
+			                item_Struct:Use(self.Entity)		
+						end
+						_TimerService:SetTimerOnce(equipFunc,1)
+		            end
+				else
+					item_Struct = ConsumptiontItemStuct()
+				end
+			end
+		    item_Struct:SetItemId(item_idx):SetInventoryIndex(inv_idx):SetCount(item_cnt) -- ItemStruct 초기화
+			
+		 	self._T.inventoryData[inv_idx] = item_Struct
+		end
+	end
+
+	@ExecSpace("Multicast")
+	method void SendInitializedEvent(OnInventoryInitialized event)
+		if self:IsClient() and _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method boolean ModifyItem(integer itemIndex, integer deltaAmount)
+		local str_ItemIndex = tostring(itemIndex)
+		if self._T.inventoryindex_Dict[str_ItemIndex] == nil or _GlobalData:GetItem(str_ItemIndex).type == "장비" then
+		    if self:AddNewItem(itemIndex) == false then
+				return false
+			end
+		end
+		
+		local inventory_idx = self._T.inventoryindex_Dict[str_ItemIndex][1]
+		---@type ItemStruct
+		local item_Struct = self._T.inventoryData[inventory_idx] -- 얕은 복사
+		local prevAmount = item_Struct.count
+		local amountResult = prevAmount + deltaAmount
+		
+		if amountResult == 0 then
+			item_Struct.count = amountResult
+			self:RemoveItem(itemIndex,tonumber(inventory_idx))
+			return true
+		elseif amountResult < 0 then
+		    --log_error("Item amount is less then zero")
+			log_error("아이템 개수가 음수가 됩니다. 버그를 확인해주세요")
+			return false
+		end
+		
+		if amountResult > self.slot_Capacity then -- self.slot_Capacity = 9999
+			local emptySlot = 0
+			local total_EqualItemSlot_Remain_Capacity = 0
+			local equalItemSlot_Table = {}
+			for i = 1, self.MaxInventorySlot do
+				---@type ItemStruct
+				local item = self._T.inventoryData[i]
+			    if item.itemId == 0 then
+					emptySlot += 1
+				elseif item.itemId == itemIndex then
+					total_EqualItemSlot_Remain_Capacity += (self.slot_Capacity - item.count)
+					table.insert(equalItemSlot_Table,i)
+			    end
+			end
+			
+			local total_Remain_Capacity = (emptySlot * self.slot_Capacity) + total_EqualItemSlot_Remain_Capacity
+			if total_Remain_Capacity < deltaAmount then
+				log("인벤토리의 칸을 충분히 비워주세요")
+				return false
+			end
+			
+			local modifiedEvent = OnInventoryModified()
+			modifiedEvent.itemIndex = itemIndex
+			modifiedEvent.total_ItemCount = self:GetItemCount(itemIndex)
+			
+			local remainAmount = deltaAmount
+			for i, inv in ipairs(equalItemSlot_Table) do
+				---@type ItemStruct
+				local equalItem_Struct = self._T.inventoryData[inv]
+				if equalItem_Struct.count + remainAmount > self.slot_Capacity then
+					local addAmount = self.slot_Capacity - equalItem_Struct.count
+					equalItem_Struct.count += addAmount
+					remainAmount -= addAmount
+				else
+					equalItem_Struct.count += remainAmount
+					remainAmount = 0
+				end
+				table.insert(modifiedEvent.itemCount_Table,equalItem_Struct.count)
+				table.insert(modifiedEvent.inventoryIndex_Table,inv)
+			end
+			
+			while remainAmount > 0 do
+				if self:AddNewItem(itemIndex) == false then 
+					-- 이미 위에서 얻어도 된다는 가능성 계산을 마쳤기에 여기서 false가 나면 안됨
+					log("[error] 아이템이 소멸되었습니다.")
+				end
+				-- 새롭게 인벤토리 자리로 받은 슬롯 수정
+				local newInventory_idx = self._T.inventoryindex_Dict[str_ItemIndex][1]
+				---@type ItemStruct
+				local newItem_Struct = self._T.inventoryData[newInventory_idx]
+				local decreaseAmount = remainAmount
+				if remainAmount > self.slot_Capacity then		
+					decreaseAmount = self.slot_Capacity
+				end
+				
+			    newItem_Struct.count = decreaseAmount
+				table.insert(modifiedEvent.itemCount_Table,decreaseAmount)
+				table.insert(modifiedEvent.inventoryIndex_Table,newInventory_idx)
+				remainAmount -= decreaseAmount
+			end
+			
+			self:SendItemModifiedEvent(modifiedEvent) -- 아이템이 분할됐기 때문에 2번 send 해야함
+			
+		else 	
+			item_Struct.count = amountResult
+			local modifiedEvent = OnInventoryModified()
+			modifiedEvent.itemIndex = itemIndex
+			modifiedEvent.total_ItemCount = self:GetItemCount(itemIndex)
+			table.insert(modifiedEvent.itemCount_Table,amountResult)
+			table.insert(modifiedEvent.inventoryIndex_Table,inventory_idx)
+			
+			self:SendItemModifiedEvent(modifiedEvent)
+			
+			if item_Struct:IsIncludeAbility() then
+				---@type EquipmentItemStruct
+				local abilityItem = item_Struct
+				local syncItemAbilityDataEvent = SyncItemAbilityData()
+				table.insert(syncItemAbilityDataEvent.inventoryIndex_Table,inventory_idx)
+				table.insert(syncItemAbilityDataEvent.itemLevels,abilityItem.level)
+				local skill = {}
+				if abilityItem:IsWeapon() then
+					skill = {
+						skillZ = abilityItem.skillZ,
+						skillX = abilityItem.skillX
+					}
+				end
+				table.insert(syncItemAbilityDataEvent.skillIds,skill)
+		
+				self:SendItemAbilityDataEvent(syncItemAbilityDataEvent)
+			end
+		end
+		
+		--log("인벤수정발생")
+		return true
+	end
+
+	method boolean AddNewItem(integer itemIndex)
+		local newInvenIndex = 0
+		local str_ItemIndex = tostring(itemIndex)
+		for i = 1, self.MaxInventorySlot do
+			---@type ItemStruct
+			local item_Struct = self._T.inventoryData[i]
+			if item_Struct.itemId == 0 then
+				newInvenIndex = i -- 인벤토리를 차지하지 않는 칸을 찾음.
+				break
+			end
+		end
+		
+		if newInvenIndex ~= 0 then
+			---@type ItemStruct
+			local item_Struct = ItemStruct()
+			local itemInfo = _GlobalData:GetItem(str_ItemIndex)
+			if itemInfo.isUse == 1 then
+				if itemInfo.type == "장비" then
+					local equipment_Item = EquipmentItemStruct()
+					-- 장비 아이템이 새로운 아이템이 맞다면 스킬정보를 랜덤하게 구성한다.
+					equipment_Item:TryRandomSkill(itemIndex)
+					item_Struct = equipment_Item
+				else
+					item_Struct = ConsumptiontItemStuct()
+				end
+			end
+			item_Struct:SetItemId(itemIndex):SetInventoryIndex(newInvenIndex):SetCount(0) -- ItemStruct 초기화
+			
+			self._T.inventoryData[newInvenIndex] = item_Struct
+			
+		
+			if self._T.inventoryindex_Dict[str_ItemIndex] == nil then
+				self._T.inventoryindex_Dict[str_ItemIndex] = {}
+			end
+			table.insert(self._T.inventoryindex_Dict[str_ItemIndex],1, newInvenIndex)
+		else
+			log("인벤토리 공간이 부족합니다.")
+			return false
+		end
+		
+		return true
+	end
+
+	@ExecSpace("Multicast")
+	method void SendItemModifiedEvent(OnInventoryModified event)
+		if self:IsClient() and _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end  
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void RemoveItem(integer itemIndex, integer inven_Index)
+		if itemIndex < 1 then
+		    log_error("itemIndex error")
+			return
+		end
+		local str_ItemIndex = tostring(itemIndex)
+		local inventoryIndexTable = self._T.inventoryindex_Dict[str_ItemIndex]
+		
+		for pos,inv in ipairs(inventoryIndexTable) do
+			if inv == inven_Index then
+				table.remove(inventoryIndexTable,pos)
+				if #inventoryIndexTable == 0 then
+					self._T.inventoryindex_Dict[str_ItemIndex] = nil
+				end
+				break
+			end
+		end
+		self._T.inventoryData[inven_Index] = nil
+		self._T.inventoryData[inven_Index] = ItemStruct()
+		
+		local event = OnInventorySlotItemRemoved()
+		event.inventoryIndex = inven_Index
+		event.itemIndex = itemIndex
+		event.totalItemCount = self:GetItemCount(itemIndex)
+		if event.totalItemCount > 0 then
+			self:SingleSortInventoryByItemCount(str_ItemIndex)
+		end
+		self:SendInventoryItemRemovedEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void ModifyMoney(integer changevalue)
+		self.money += changevalue
+		local modifiedEvent = OnMoneyModified()
+		modifiedEvent.money_value = self.money
+		self:SendMoneyModifiedEvent(modifiedEvent)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendMoneyModifiedEvent(OnMoneyModified event)
+		if self:IsClient() and _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end  
+		self.Entity:SendEvent(event)
+	end
+
+	method void SaveInventory(boolean IsAsync)
+		local saveinfocontainer = {}
+		for i, item in ipairs(self._T.inventoryData) do
+			---@type ItemStruct
+			local item_Struct = item
+		    local inv_idx = tostring(i)
+			local item_idx = tostring(item_Struct.itemId)
+			local item_cnt = tostring(item_Struct.count)
+			if item_idx == 'nil' then
+				log("SaveInventory error. item_idx is nil")
+			end
+			saveinfocontainer[i] = inv_idx.."/"..item_idx.."/"..item_cnt
+			if item_idx == "0" then
+				continue
+			end
+			local itemInfo = _GlobalData:GetItem(item_idx)
+			
+			if itemInfo.type == "장비" then
+				---@type EquipmentItemStruct
+				local equipmentItem_Struct = item
+				local isEquiped = equipmentItem_Struct.isEquiped == true and "1" or "0"
+		        saveinfocontainer[i] = saveinfocontainer[i].."/"..equipmentItem_Struct.level.."/"..equipmentItem_Struct.type
+				.."/"..equipmentItem_Struct.skillZ["id"]--.."/"..equipmentItem_Struct.skillZ["level"]
+				.."/"..equipmentItem_Struct.skillX["id"]--.."/"..equipmentItem_Struct.skillX["level"]
+				.."/"..isEquiped
+		        --.."/"..equipmentItem_Struct.skillC["id"].."/"..equipmentItem_Struct.skillC["level"] C스킬은 제외
+		        --log(saveinfocontainer[i])
+			end
+		end
+			
+		local dataConcatString = table.concat(saveinfocontainer, ",")
+		local datasave_Dict = {MoneyData = tostring(self.money), ItemData = dataConcatString}
+		if IsAsync then
+			self._T.userDataStorage:BatchSetAsync(datasave_Dict,function() log("인벤토리 저장 완료") end)
+		else
+			self._T.userDataStorage:BatchSetAndWait(datasave_Dict)
+		end
+		--log("저장 중...")
+	end
+
+	@ExecSpace("ServerOnly")
+	method integer GetMoney()
+		return self.money
+	end
+
+	@ExecSpace("ServerOnly")
+	method boolean CanReceiveItem(integer itemIndex)
+		-- 아이템 1 개만 들어 갈 수 있는지 확인
+		for i = 1, self.MaxInventorySlot do
+			---@type ItemStruct
+			local item = self._T.inventoryData[i]
+		    if item.itemId == 0 then
+		        return true
+		    end
+		end
+		
+		return false
+	end
+
+	method boolean CanReceiveItems(table dict_items)
+		local neadCount = 0
+		for itemId, cnt in pairs(dict_items) do
+		    neadCount += 1
+		end
+		
+		for i = 1, self.MaxInventorySlot do
+			---@type ItemStruct
+			local item = self._T.inventoryData[i]
+		    if item.itemId == 0 then
+				neadCount -= 1
+				if neadCount == 0 then
+					return true
+				end
+		    end
+		end
+		
+		return false
+	end
+
+	@ExecSpace("Server")
+	method void RequestSlotItemUse(integer inventoryIndex)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+		    --log(senderUserId.."~="..self.Entity.PlayerComponent.UserId)
+			return
+		end
+		
+		self:SlotItemUse(inventoryIndex)
+	end
+
+	method void SendEquipItemEvent(OnEquipItem event)
+		self.Entity:SendEvent(event)
+	end
+
+	method ItemStruct GetItem(integer inventoryIndex)
+		---@type ItemStruct
+		local item_Struct = self._T.inventoryData[inventoryIndex]
+		return item_Struct
+	end
+
+	@ExecSpace("Multicast")
+	method void SendInventoryItemRemovedEvent(OnInventorySlotItemRemoved event)
+		if self:IsClient() and _UserService.LocalPlayer.PlayerComponent.UserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end  
+		self.Entity:SendEvent(event)
+	end
+
+	method integer GetItemCount(integer itemId)
+		if self._T.inventoryindex_Dict[tostring(itemId)] == nil then
+			return 0
+		end
+		
+		local totalCount = 0
+		for pos,inv in ipairs(self._T.inventoryindex_Dict[tostring(itemId)]) do
+		    ---@type ItemStruct
+		    local item_Struct = self._T.inventoryData[inv]
+		    totalCount += item_Struct.count
+		end
+		
+		return totalCount
+	end
+
+	@ExecSpace("Server")
+	method void ChangeSlot(integer slotA_invenId, integer slotB_invenId)
+		---@type ItemStruct
+		local itemA_Struct = self._T.inventoryData[slotA_invenId]
+		itemA_Struct.inventoryIndex = slotB_invenId
+		---@type ItemStruct
+		local itemB_Struct = self._T.inventoryData[slotB_invenId]
+		itemB_Struct.inventoryIndex = slotA_invenId
+		
+		local temp = self._T.inventoryData[slotA_invenId]
+		self._T.inventoryData[slotA_invenId] = self._T.inventoryData[slotB_invenId]
+		self._T.inventoryData[slotB_invenId] = temp
+		
+		local invetoryATable = self._T.inventoryindex_Dict[tostring(itemA_Struct.itemId)]
+		local invetoryBTable = self._T.inventoryindex_Dict[tostring(itemB_Struct.itemId)]
+		
+		if invetoryATable ~= nil then
+			for pos ,inv in ipairs(invetoryATable) do
+				if inv == slotA_invenId then
+					table.remove(invetoryATable,pos)
+					table.insert(invetoryATable,slotB_invenId)
+					self:SingleSortInventoryByItemCount(tostring(itemA_Struct.itemId))
+					break
+				end
+			end
+		end
+		
+		if invetoryBTable ~= nil then
+			for pos ,inv in ipairs(invetoryBTable) do
+				if inv == slotB_invenId then
+					table.remove(invetoryBTable,pos)
+					table.insert(invetoryBTable,slotA_invenId)
+					self:SingleSortInventoryByItemCount(tostring(itemB_Struct.itemId))
+					break
+				end
+			end
+		end
+		
+		local event = OnInventorySlotChange()
+		event.slotA_Inventory_Index = slotA_invenId
+		event.slotB_Inventory_Index = slotB_invenId 
+		self:SendInventorySlotChange(event)
+		
+	end
+
+	@ExecSpace("Multicast")
+	method void SendInventorySlotChange(OnInventorySlotChange event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SlotItemUse(integer inventoryIndex)
+		---@type ItemStruct
+		local item_Struct = self._T.inventoryData[inventoryIndex]
+		log(inventoryIndex.."사용")
+		if item_Struct:Use(self.Entity) then
+			if item_Struct:IsConsumable() then
+				self:ModifyItem(item_Struct.itemId,-1)
+			end
+		end
+	end
+
+	method integer GetInventoryIndex(integer itemIndex)
+		local inventoryIndexTable = self._T.inventoryindex_Dict[tostring(itemIndex)]
+		if inventoryIndexTable == nil then
+			return 0
+		end
+		
+		return inventoryIndexTable[1]
+	end
+
+	@ExecSpace("Multicast")
+	method void SendItemAbilityDataEvent(SyncItemAbilityData event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void AllSortInventoryByItemCount()
+		for strItemIndex,invenTable in pairs(self._T.inventoryindex_Dict) do
+			self:SingleSortInventoryByItemCount(strItemIndex)
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SingleSortInventoryByItemCount(any itemIndex)
+		local inventoryIndexTable = self._T.inventoryindex_Dict[itemIndex]
+		table.sort(inventoryIndexTable,function(a,b)
+			return self._T.inventoryData[a].count < self._T.inventoryData[b].count
+		end)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void GenerateItemAbilityStats()
+		local syncItemAbilityDataEvent = SyncItemAbilityData()
+		
+		for inv,data in ipairs(self._T.inventoryData) do
+			---@type ItemStruct
+			local item_Struct = data
+			if item_Struct:IsIncludeAbility() then
+				---@type EquipmentItemStruct
+				local abilityItem = item_Struct
+				table.insert(syncItemAbilityDataEvent.inventoryIndex_Table,inv)
+				table.insert(syncItemAbilityDataEvent.itemLevels,abilityItem.level)
+				local skill = {}
+				if abilityItem:IsWeapon() then
+					skill = {
+						skillZ = abilityItem.skillZ,
+						skillX = abilityItem.skillX
+					}
+				end
+				table.insert(syncItemAbilityDataEvent.skillIds,skill)
+			end
+		end
+		
+		self:SendItemAbilityDataEvent(syncItemAbilityDataEvent)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Service", "UserService")
+	handler HandleUserLeaveEvent(UserLeaveEvent event)
+		-- Parameters
+		local UserId = event.UserId
+		---------------------------------------------------------
+		
+		local thisUserId = self.Entity.PlayerComponent.UserId
+		if thisUserId ~= UserId then
+		   return
+		end
+		-- 플레이를 끝낼 때 인벤토리 데이터 정보를 저장함
+		
+		
+		if self._T.userDataStorage then
+			log("PlayerLeave인벤저장")
+		    self:SaveInventory(false)
+		end
+		
+		--log("유저종료")
+	end
+
+end

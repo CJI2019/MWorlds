@@ -1,0 +1,37 @@
+@BTNode
+script Wander extends BTNode
+
+	property Entity parent = nil
+
+	property number time = 0
+
+	property number dir = 0
+
+	method void OnInit()
+		self.parent = self.ParentAI.Entity
+		self.time = math.random() * 2 -- 0~ 2초
+		self.dir = math.random(2)
+	end
+
+	method any OnBehave(number delta)
+		self.time -= delta
+		if self.time > 0 then
+			self.parent.StateComponent:ChangeState("MOVE")
+			local my_move = self.parent.MovementComponent
+			local speed = my_move.InputSpeed
+			
+			if self.dir == 1 then
+				self.parent.SpriteRendererComponent.FlipX = false
+				my_move:MoveToDirection(Vector2(-1,0),speed * delta)
+			else
+				self.parent.SpriteRendererComponent.FlipX = true
+				my_move:MoveToDirection(Vector2(1,0),speed * delta)
+			end
+			
+			return BehaviourTreeStatus.Running
+		end
+		
+		return BehaviourTreeStatus.Success
+	end
+
+end

@@ -1,0 +1,12 @@
+@Event
+script OnInventoryModified extends EventType
+
+	property integer itemIndex = 0
+
+	property table itemCount_Table = {}
+
+	property table inventoryIndex_Table = {}
+
+	property integer total_ItemCount = 0
+
+end

@@ -1,0 +1,30 @@
+@Component
+script QuestNameButtonComponent extends Component
+
+	property string questId = ""
+
+	property EntityRef dialog = "1ba86c1d-30a4-4843-9e93-d9da43fc06f5"
+
+	method void SetQuest(string quest)
+		self.questId = quest
+		
+		local text = self.Entity.TextComponent
+		if text then
+			text.Text = _QuestManager:GetQuestInfo(self.questId).title
+		end
+	end
+
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ButtonComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		---------------------------------------------------------
+		self.dialog.DialogComponent:SelectQuest(self.questId)
+	end
+
+end

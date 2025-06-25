@@ -1,0 +1,94 @@
+@Component
+script PickingItemComponent extends Component
+
+	property EntityRef pickedItem = nil
+
+	property EntityRef uiInventory = "44fd333d-671b-488d-89fa-178798f0faa2"
+
+	property EntityRef tempUI = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.tempUI = _EntityService:GetEntityByPath("/ui/UIGroup")
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		local cursorPos = _InputService:GetCursorPosition()
+		local ppix = 1920 / _UILogic.ScreenWidth
+		local ppiy = 1080 / _UILogic.ScreenHeight
+		local uiXpos = ppix * cursorPos.x
+		local uiYpos = (ppiy * cursorPos.y)
+		self.Entity.UITransformComponent.anchoredPosition.x = uiXpos
+		self.Entity.UITransformComponent.anchoredPosition.y = uiYpos
+		
+		if self.uiInventory.Enable == false then
+			self:DeActivate()
+		end
+	end
+
+	method void DeActivate()
+		self.Entity.Enable = false
+		self.pickedItem = nil
+	end
+
+	method void FrontOrderGroup()
+		local originalParent = self.Entity.Parent
+		self.Entity:AttachTo(self.tempUI)
+		self.Entity:AttachTo(originalParent)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnItemPicking(OnItemPicking event)
+		if self.pickedItem == nil then
+			local itemInfo = _GlobalData:GetItem(tostring(event.pickedEntity.UIItemSlot.itemIndex))
+			if itemInfo == nil then
+				return
+			end
+			self.pickedItem = event.pickedEntity
+			self.Entity.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
+			self.Entity.Enable = true
+			self:FrontOrderGroup()
+		else
+			-- case 1 : 피킹한 아이템이 존재하는 상태로 똑같은 인벤토리 슬롯을 클릭 했을 때.
+			-- 아이템을 피킹을 멈춘다.
+			-- case 2 : 피킹한 아이템이 존재하는 상태로 다른 인벤토리 슬롯을 클릭 했을 때.
+			-- 아이템의 슬롯 위치를 바꾼다.
+			if	self.pickedItem ~= event.pickedEntity then
+				local slotA_Id = self.pickedItem.UIItemSlot.inventoryIndex
+				local slotB_Id = event.pickedEntity.UIItemSlot.inventoryIndex
+				if _UIController.isItemSlotSwapEnabled == 0 then
+					_UserService.LocalPlayer.PlayerInventory:ChangeSlot(slotA_Id,slotB_Id)
+				end
+				
+			end
+			
+			self:DeActivate()
+		end
+		
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyDownEvent(KeyDownEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local key = event.key
+		---------------------------------------------------------
+		if KeyboardKey.Mouse0 == key and self.pickedItem ~= nil then
+			if _InputService:IsPointerOverUI() == true then
+				return
+			end
+		    --log("아이템을 놓았습니다.")
+			self:DeActivate()
+			
+		end
+	end
+
+end

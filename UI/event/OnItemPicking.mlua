@@ -1,0 +1,6 @@
+@Event
+script OnItemPicking extends EventType
+
+	property EntityRef pickedEntity = nil
+
+end

@@ -1,0 +1,121 @@
+@Component
+script UIQuickSlotComponent extends Component
+
+	property EntityRef uiPickedItem = "25b30292-91fb-4702-a49f-daa4253ed293"
+
+	property EntityRef img_Icon = nil
+
+	property string key_Code = ""
+
+	property EntityRef txt_ItemAmount = nil
+
+	property integer item_Index = 0
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.img_Icon = _EntityService:GetEntityByPath(self.Entity.Path.."/img_icon")
+		self.txt_ItemAmount = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_itemAmount")
+		self._T.itemCount = 0
+	end
+
+	@ExecSpace("ClientOnly")
+	method void SetItemCountText(integer count)
+		if count > 999 then
+			self.txt_ItemAmount.TextComponent.Text = "+999"
+		else
+			self.txt_ItemAmount.TextComponent.Text = tostring(count)
+		end
+		
+		self._T.itemCount = count
+		
+		if self.uiPickedItem.PickingItemComponent.pickedItem ~= nil then
+			local pickedSlot = self.uiPickedItem.PickingItemComponent.pickedItem.UIItemSlot
+			if pickedSlot ~= nil then
+				if pickedSlot.itemIndex == self.item_Index then
+					self.uiPickedItem.PickingItemComponent:DeActivate()
+				end
+			end
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	method void SendAddQuickSlot(integer inventoryIndex, integer itemIndex)
+		local setQuickSlotEvent = OnAddQuickSlot()
+		setQuickSlotEvent.inventory_Index = inventoryIndex
+		setQuickSlotEvent.item_Id = itemIndex
+		setQuickSlotEvent.strKey_Code = self.key_Code
+		_UserService.LocalPlayer.PlayerQuickSlotComponent:SetQuickSlotRequest(setQuickSlotEvent)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		if self.uiPickedItem.PickingItemComponent.pickedItem == nil then
+			return
+		end
+		
+		local picked_Item = self.uiPickedItem.PickingItemComponent.pickedItem
+		self.uiPickedItem.PickingItemComponent:DeActivate()
+		
+		local item_Info = _GlobalData:GetItem(tostring(picked_Item.UIItemSlot.itemIndex))
+		if item_Info.type ~= "소비" then
+			return
+		end
+		
+		self.img_Icon.SpriteGUIRendererComponent.ImageRUID = item_Info.ruid
+		self.item_Index = tonumber(item_Info.item_Id)
+		self:SetItemCountText(picked_Item.UIItemSlot.itemCount)
+		self:SendAddQuickSlot(picked_Item.UIItemSlot.inventoryIndex,picked_Item.UIItemSlot.itemIndex)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnInventoryModified(OnInventoryModified event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		-- local itemCount_Table = event.itemCount_Table
+		-- local inventoryIndex_Table = event.inventoryIndex_Table
+		local total_ItemCount = event.total_ItemCount
+		---------------------------------------------------------
+		if self.item_Index ~= itemIndex then
+			return
+		end
+		
+		if self._T.itemCount == 0 then
+		    self:SendAddQuickSlot(-1,itemIndex)	
+		end
+		
+		self:SetItemCountText(total_ItemCount)
+		
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnGetTotalItemCount(OnGetTotalItemCount event)
+		-- Parameters
+		local item_Index = event.item_Index
+		local totalItemCount = event.totalItemCount
+		---------------------------------------------------------
+		if self.item_Index ~= item_Index then
+			return
+		end
+		self:SetItemCountText(totalItemCount)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnInventorySlotItemRemoved(OnInventorySlotItemRemoved event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		-- local inventoryIndex = event.inventoryIndex
+		local totalItemCount = event.totalItemCount
+		---------------------------------------------------------
+		if self.item_Index ~= itemIndex then
+			return
+		end
+		
+		self:SetItemCountText(totalItemCount)
+	end
+
+end

@@ -1,0 +1,6 @@
+@Event
+script OnMonsterDead extends EventType
+
+	property EntityRef monster = nil
+
+end

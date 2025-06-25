@@ -1,0 +1,4 @@
+@Event
+script OnBuffActived extends EventType
+
+end

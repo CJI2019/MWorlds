@@ -1,0 +1,33 @@
+@State
+script BrokenBox extends StateType
+
+	property boolean exitFlag = false
+
+	property number timerId = 0
+
+	method void OnEnter()
+		    self.exitFlag = false
+		    self.timerId = _TimerService:SetTimerOnce(function() self.exitFlag = true end, 1.1)
+		
+		    local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
+		    spriteRenderer.SpriteRUID = "76815f621e354f57b5adb5b9faaf9eb3"  --BROKEN RUID
+		--spriteRenderer.SpriteRUID = "dc932872543f4a02bf41e977ab79e5ad"  --BROKEN RUID
+		
+		    _TimerService:SetTimerOnce(function() 
+		    	_SpawnService:SpawnByModelId("model://d4fc54ab-b99c-4b26-b10b-5073aca5e881",
+		 "Item", self.ParentComponent.Entity.TransformComponent.Position + Vector3(0,0.12,0), self.ParentComponent.Entity.Parent) 
+		    end, 0.21) 
+		
+		    -- Model_Apple's model ID
+	end
+
+	method boolean OnConditionCheck(string nextStateName)
+		return self.exitFlag
+	end
+
+	method void OnExit()
+		     self.ParentComponent.Entity.SpriteRendererComponent.SpriteRUID = "b871399ae18d41c4b76c2ae79feefa7d" --IDLE RUID
+		     _TimerService:ClearTimer(self.timerId)
+	end
+
+end

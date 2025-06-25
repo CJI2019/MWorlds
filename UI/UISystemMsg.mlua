@@ -1,0 +1,76 @@
+@Component
+script UISystemMsg extends Component
+
+	property integer totalMsgCount = 5
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self._T.msgList = {}
+		self._T.originMsg = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_system_msg")
+		self._T.msgList[1] = self._T.originMsg
+		
+		---@type EntityRef
+		local originMsg = self._T.originMsg
+		originMsg.Enable = false
+		for i = 1 , self.totalMsgCount - 1 do
+			local newMsg = _SpawnService:SpawnByEntity(originMsg,originMsg.Name..i,Vector3.zero,self.Entity)	
+		    newMsg.UITransformComponent.anchoredPosition = originMsg.UITransformComponent.anchoredPosition:Clone()
+			newMsg.Enable = false
+			self._T.msgList[i+1] = newMsg
+		end
+		
+		self._T.activateMsgs = {}
+	end
+
+	method void AddMsg(string str)
+		---@type EntityRef
+		local selectMsgIndex = nil
+		for i = 1, self.totalMsgCount do
+			---@type EntityRef
+			local msg = self._T.msgList[i]
+			if msg.Enable == true then
+				continue
+			end
+			selectMsgIndex = i
+			break
+		end
+		
+		if selectMsgIndex == nil then
+			for pos, object in ipairs(self._T.activateMsgs) do
+				selectMsgIndex = object["index"]
+				_TimerService:ClearTimer(object["handle"])
+				table.remove(self._T.activateMsgs,pos)
+				break
+			end	
+		end
+		---@type EntityRef
+		local selectMsg = self._T.msgList[selectMsgIndex]
+		selectMsg.TextComponent.Text = str
+		selectMsg.Enable = true
+		selectMsg.UITransformComponent.anchoredPosition.y = 0
+		for pos,object in ipairs(self._T.activateMsgs) do
+			local idx = object["index"]
+			---@type EntityRef
+			local msg = self._T.msgList[idx]
+			msg.UITransformComponent.anchoredPosition.y += 30
+		end
+		
+		local deactivate = function()
+			selectMsg.Enable = false
+			table.remove(self._T.activateMsgs,1)
+		end
+		local handle = _TimerService:SetTimerOnce(deactivate,3)
+		table.insert(self._T.activateMsgs,{index = selectMsgIndex,handle = handle })
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleSystemMsgEvent(SystemMsgEvent event)
+		-- Parameters
+		local msg = event.msg
+		---------------------------------------------------------
+		self:AddMsg(msg)
+	end
+
+end

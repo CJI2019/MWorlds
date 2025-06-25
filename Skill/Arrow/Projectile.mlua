@@ -1,0 +1,124 @@
+@Component
+script Projectile extends Component
+
+	@Sync
+	property number DestroyAfterSec = 2
+
+	@Sync
+	property number Speed = 7.5
+
+	@Sync
+	property string ExplodeSpriteRUID = "47a613712de34f9ba2ea25ef40894756"
+
+	@Sync
+	property Vector2 ExplodeEffectOffset = Vector2(0,0)
+
+	@Sync
+	property number EffectScale = 1
+
+	property boolean ToLeft = false
+
+	property Entity Firer = nil
+
+	method void OnBeginPlay()
+		-- 발사체가 발사되기 전에는 움직이지 않도록 일단 false로 설정
+		self._T.Fired = false
+	end
+
+	@ExecSpace("ServerOnly")
+	method void OnUpdate(number delta)
+		    if not self._T.Fired then
+		    	return
+		    end
+		
+		    local xDelta = self.Speed * delta
+		    if self.ToLeft then
+		    	xDelta = xDelta * -1
+		    end 
+		
+		    self.Entity.TransformComponent:Translate(xDelta, 0)
+	end
+
+	method void Fire()
+		    local destroySelf = function()
+		    	self:Explode()
+		    end
+		
+		    -- DestroyAfterSec 시간 이후에 destroySelf가 실행되도록 타이머 설정
+		    _TimerService:SetTimerOnce(destroySelf, self.DestroyAfterSec) 
+		
+		    -- 왼쪽으로 발사할 때는 발사체의 스프라이트 방향 전환
+		    self.Entity.SpriteRendererComponent.FlipX = not self.ToLeft 
+		
+		    self._T.Fired = true
+	end
+
+	method void Explode()
+		    local shape = BoxShape(Vector2.zero, Vector2.one, 0)
+		
+		    -- 폭발 이펙트 sprite 사이즈를 가져와 공격 영역으로 설정
+		    _ResourceService:PreloadAsync({self.ExplodeSpriteRUID}, function()
+		    	if not isvalid(self.Firer) or not isvalid(self.Firer.PlayerAttack) then
+			   		return
+		    	end
+		
+		    	local clip = _ResourceService:LoadAnimationClipAndWait(self.ExplodeSpriteRUID)
+		    	local firstFrameSprite = clip.Frames[1].FrameSprite
+		    	local firstSpriteSizeInPixel = Vector2(firstFrameSprite.Width, firstFrameSprite.Height)
+		    	local ppu = firstFrameSprite.PixelPerUnit
+		
+		    	local spriteSize = firstSpriteSizeInPixel / ppu
+		    	local positionOffset = (firstSpriteSizeInPixel / 2 - firstFrameSprite.PivotPixel:ToVector2()) / ppu
+		
+		    	-- 오프셋 보정
+		    	local effectOffset = self.ExplodeEffectOffset
+		    	if self.ToLeft then
+		    		effectOffset.x = -effectOffset.x
+		    	end
+		
+		    	-- 폭발 이펙트의 영역만큼 공격함
+		    	local transform = self.Entity.TransformComponent
+		    	local worldPosition = transform.WorldPosition
+		    	local scale = self.EffectScale
+		    	local radian = math.rad(transform.ZRotation)
+		    	local offsetX = math.cos(radian) * positionOffset.x * scale - math.sin(radian) * positionOffset.y * scale
+		    	if not self.ToLeft then
+		    	    offsetX = -offsetX
+		    	end
+		    	local offsetY = math.sin(radian) * positionOffset.x * scale + math.cos(radian) * positionOffset.y * scale
+		    	shape.Size = Vector2(spriteSize.x * math.abs(scale), spriteSize.y * math.abs(scale))
+		    	shape.Position = Vector2(worldPosition.x + offsetX + effectOffset.x, worldPosition.y + offsetY + effectOffset.y)
+		    	shape.Angle = transform.ZRotation
+		
+		    	self.Firer.PlayerAttack:AttackFast(shape, nil, CollisionGroups.Monster)		
+		
+		    	-- 폭발 이펙트 재생
+		    	local effectPosition = Vector3(transform.Position.x + effectOffset.x, transform.Position.y + effectOffset.y, transform.Position.z)
+		    	local options = { ["FlipX"] = not self.ToLeft }
+		    	_EffectService:PlayEffect(self.ExplodeSpriteRUID, self.Entity, effectPosition, 0, Vector3.one * self.EffectScale, false, options)	
+		
+		    	-- 발사체 제거
+		    	self.Entity:Destroy()
+		    end)
+	end
+
+	@EventSender("Self")
+	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TriggerComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TriggerBodyEntity = event.TriggerBodyEntity
+		---------------------------------------------------------
+		    -- Parameters
+		    local TriggerBodyEntity = event.TriggerBodyEntity
+		    --------------------------------------------------------
+		    if isvalid(TriggerBodyEntity.Monster) == false then
+		    	return
+		    end
+		      self:Explode()
+	end
+
+end

@@ -1,0 +1,48 @@
+@Component
+script NPCComponent extends Component
+
+	property integer click = 0
+
+	@ExecSpace("ClientOnly")
+	method void Interaction()
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	method void TouchLogic(TouchEvent event)
+		if _InputService:IsPointerOverUI() == true then
+			return
+		end
+		
+		local InitClick = function()
+			self.click = 0
+		end
+		self.click += 1
+		
+		_TimerService:SetTimerOnce(InitClick,0.3)
+		
+		if self.click == 2 then
+		    --log("interaction")
+			self:Interaction()
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleTouchEvent(TouchEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		--log("NPC터치")
+		
+		self:TouchLogic(event)
+		
+	end
+
+end

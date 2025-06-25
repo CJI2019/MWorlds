@@ -1,0 +1,6 @@
+@Event
+script OnExpUpdated extends EventType
+
+	property number exp = 0
+
+end

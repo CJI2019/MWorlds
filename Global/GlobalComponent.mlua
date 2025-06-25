@@ -1,0 +1,8 @@
+@Component
+script GlobalComponent extends Component
+
+	property EntityRef Common = "b447311c-6f03-4ba1-aad0-8f0fe58df5c1"
+
+	property boolean Render_Collider = false
+
+end

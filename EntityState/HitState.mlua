@@ -1,0 +1,14 @@
+@State
+script HitState extends StateType
+
+	method void OnEnter()
+		local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
+		
+		spriteRenderer.SpriteRUID = self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["hit"]
+	end
+
+	method boolean OnConditionCheck(string nextStateName)
+		return not self.ParentComponent.Entity.Monster.isKnockback
+	end
+
+end

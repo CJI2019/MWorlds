@@ -1,0 +1,31 @@
+@Component
+script PlantTrigger extends SpaceBarTriggerComponent
+
+	property Entity ui_PlantProgress = "41360a9c-c7b9-4937-91df-dff514fc4fb7"
+
+	method void EnterTrigger()
+		self.ui_PlantProgress:SetEnable(true)
+		self.ui_PlantProgress.Gathering:SetUpdate(true)
+		self.ui_PlantProgress.Gathering.TargetEntity = self.Entity
+	end
+
+	method void LeaveTrigger()
+		self.ui_PlantProgress:SetEnable(false)
+		self.ui_PlantProgress.Gathering:SetUpdate(false)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleTriggerLeaveEvent(TriggerLeaveEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TriggerComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TriggerBodyEntity = event.TriggerBodyEntity
+		---------------------------------------------------------
+		self:LeaveTrigger()
+	end
+
+end

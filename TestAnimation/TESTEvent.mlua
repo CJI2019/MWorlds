@@ -1,0 +1,4 @@
+@Event
+script TESTEvent extends EventType
+
+end

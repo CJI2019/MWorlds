@@ -1,0 +1,8 @@
+@Event
+script BuyItemEvent extends EventType
+
+	property string name = ""
+
+	property integer shopItemId = -1
+
+end

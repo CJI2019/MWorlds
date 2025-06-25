@@ -1,0 +1,9 @@
+@BTNode
+script MoveStop extends BTNode
+
+	method any OnBehave(number delta)
+		self.ParentAI.Entity.MovementComponent:Stop()
+		return BehaviourTreeStatus.Success
+	end
+
+end

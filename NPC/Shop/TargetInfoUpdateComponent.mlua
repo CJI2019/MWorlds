@@ -1,0 +1,257 @@
+@Component
+script TargetInfoUpdateComponent extends Component
+
+	property Entity value = "b86859af-df85-4a13-a405-613993811687"
+
+	property Entity name = "b5191d50-7511-440f-a3be-cd7042d30c19"
+
+	property Entity image = "cf6f6026-200c-4075-a156-52a9f405b6ac"
+
+	property Entity desc = "a5c423d7-1b00-4436-82e1-2d81de899281"
+
+	property EntityRef targetEntity = nil
+
+	property number frameWidth = 0
+
+	property number frameHeight = 0
+
+	property EntityRef frame_Skill_Info = nil
+
+	property SpriteGUIRendererComponentRef img_Skill_Icon = nil
+
+	property TextComponentRef txt_Skill_Desc = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.frameWidth = self.Entity.UITransformComponent.RectSize.x
+		self.frameHeight = self.Entity.UITransformComponent.RectSize.y
+		
+		self.frame_Skill_Info = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_Skill_Info")
+		self.frame_Skill_Info.Enable = false
+		self.img_Skill_Icon = _EntityService:GetEntityByPath(self.frame_Skill_Info.Path.."/frame_Skill_Icon/img_icon").SpriteGUIRendererComponent
+		self.txt_Skill_Desc = _EntityService:GetEntityByPath(self.frame_Skill_Info.Path.."/frame_Skill_Desc/txt_Skill_Desc").TextComponent
+		
+		--스킬의 개수만큼 만들어 질 수 있음.
+		self._T.frame_Skill_Table = {}
+		table.insert(self._T.frame_Skill_Table,{
+			frame = self.frame_Skill_Info,
+			icon = self.img_Skill_Icon,
+			txt = self.txt_Skill_Desc
+		})
+		-- frame , icon , txt 로 구성
+		self._T.allwidth = 0
+		self._T.allheight = 0
+		self.targetEntity = nil
+	end
+
+	method void SetTarget(EntityRef target)
+		self:InitUI()
+		
+		self.targetEntity = target
+		if target == nil then
+			self.Entity.Enable = false
+			return
+		end
+		
+		self._T.allwidth = self.Entity.UITransformComponent.RectSize.x
+		self._T.allheight = self.Entity.UITransformComponent.RectSize.y
+		
+		local itemDescriptor = self.targetEntity.ItemDescriptor
+		
+		if itemDescriptor then 
+			local itemInfo = self.targetEntity.ItemDescriptor.itemInfo
+			self.name.TextComponent.Text = itemInfo.name
+			self.value.TextComponent.Text = tostring(itemInfo.buyprice)
+			self.image.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
+			self.desc.TextComponent.Text = itemInfo.description
+		else
+			-- itemDescriptor가 없다면 시도
+			self:SetItemInfo()
+		end
+		
+		self._T.allheight = self.Entity.UITransformComponent.RectSize.y
+		self.Entity.Enable = true
+		self:TrackingMousePosition()
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		if self.targetEntity == nil or _InputService:IsPointerOverUI() == false then
+			self.Entity.Enable = false
+			return
+		end
+		
+		self:TrackingMousePosition()
+	end
+
+	method void TrackingMousePosition()
+		local cursorPos = _InputService:GetCursorPosition()
+		local ppix = 1920 / _UILogic.ScreenWidth -- 스크린 해상도는 변경 될 수 있음.
+		local ppiy = 1080 / _UILogic.ScreenHeight
+		local uiXpos = ppix * cursorPos.x
+		local uiYpos = (ppiy * cursorPos.y)
+		self.Entity.UITransformComponent.anchoredPosition.x = uiXpos
+		self.Entity.UITransformComponent.anchoredPosition.y = uiYpos
+		
+		if self._T.allwidth + self.Entity.UITransformComponent.anchoredPosition.x > 1920 then
+			local offset = 1920 - (self._T.allwidth + self.Entity.UITransformComponent.anchoredPosition.x)
+			self.Entity.UITransformComponent.anchoredPosition.x += offset
+		end
+		
+		if self.Entity.UITransformComponent.anchoredPosition.y - self._T.allheight < 0 then
+			local offset = self.Entity.UITransformComponent.anchoredPosition.y - self._T.allheight
+			self.Entity.UITransformComponent.anchoredPosition.y -= offset
+		end
+	end
+
+	method void SetSkill(table skills)
+		if skills == nil then
+			return
+		end
+		
+		local skillCnt = 1
+		
+		for _,data in pairs(skills) do
+			local id = data["id"]
+			local skill_Info = _GlobalData:GetSkillInfo(tostring(id))
+			if skill_Info == nil then
+				continue
+			end
+			self:SetSkillInfo(skill_Info,skillCnt)
+			skillCnt += 1
+		end
+		
+	end
+
+	method void InitUI()
+		self.targetEntity = nil
+		self.frame_Skill_Info.Enable = false
+		self.Entity.UITransformComponent.RectSize.y = 250
+		self._T.allwidth = 0
+		self._T.allheight = 0
+		
+		for _,frameDict in pairs(self._T.frame_Skill_Table) do
+			---@type EntityRef
+			local frame = frameDict["frame"]
+			frame.Enable = false
+		end
+	end
+
+	method void AddNewFrameSkill()
+		local newFrame_Skill_Info = _SpawnService:SpawnByEntity(self.frame_Skill_Info,self.frame_Skill_Info.Name,Vector3.zero,self.frame_Skill_Info.Parent)
+		newFrame_Skill_Info.UITransformComponent.anchoredPosition = self.frame_Skill_Info.UITransformComponent.anchoredPosition:Clone()
+		
+		local img_Skill_Icon = _EntityService:GetEntityByPath(newFrame_Skill_Info.Path.."/frame_Skill_Icon/img_icon").SpriteGUIRendererComponent
+		local txt_Skill_Desc = _EntityService:GetEntityByPath(newFrame_Skill_Info.Path.."/frame_Skill_Desc/txt_Skill_Desc").TextComponent
+		table.insert(self._T.frame_Skill_Table,{
+			frame = newFrame_Skill_Info,
+			icon = img_Skill_Icon,
+			txt = txt_Skill_Desc
+		})
+	end
+
+	method void SetSkillInfo(SkillInfo skill, integer i)
+		if self._T.frame_Skill_Table[i] == nil then
+			self:AddNewFrameSkill()
+		end
+		
+		local frameDict = self._T.frame_Skill_Table[i]
+		
+		---@type SpriteGUIRendererComponent
+		local sprite = frameDict["icon"]
+		sprite.ImageRUID = skill.iconRUID
+		---@type TextComponent
+		local text = frameDict["txt"]
+		text.Text = "공격력의 "..skill.power.."% 의 데미지로 공격합니다"
+		---@type EntityRef
+		local frame = frameDict["frame"]
+		if i ~= 1 then
+			local prev_FrameDict = self._T.frame_Skill_Table[i-1]
+			---@type EntityRef
+			local prev_frame = prev_FrameDict["frame"]
+			frame.UITransformComponent.anchoredPosition.y = prev_frame.UITransformComponent.anchoredPosition.y - prev_frame.UITransformComponent.RectSize.y
+		end
+		
+		frame.Enable = true
+		
+		if i == 1 then -- 스킬 정보를 1개라도 포함한다.
+			self._T.allwidth += frame.UITransformComponent.RectSize.x
+		end
+	end
+
+	method void SetItemInfo()
+		
+		local uiItemSlot = self.targetEntity.UIItemSlot
+		
+		if uiItemSlot == nil then 
+			return
+		end
+		
+		local itemInfo = _GlobalData:GetItem(tostring(uiItemSlot.itemIndex))
+		if itemInfo == nil then
+		    return
+		end
+		
+		self.name.TextComponent.Text = itemInfo.name
+		self.image.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
+		 
+		---@type EquipmentAbilityInfo
+		local ability = uiItemSlot.ability
+		
+		if ability == nil then
+		    self.value.TextComponent.Text = "판매가격 : "..tostring(itemInfo.sellprice)
+		    self.desc.TextComponent.Text = itemInfo.description
+		else
+			local equipmentInfo = _GlobalData:GetEquipmentItem(uiItemSlot.itemIndex)
+			if equipmentInfo == nil then
+				return
+			end
+			
+			self.value.TextComponent.Text = "Rating "..tostring(equipmentInfo.rating).."[LV : "..ability.level.."]"
+			local textCnt = 1
+			local text = ""
+			if ability.hp ~= 0 then
+				text = text.."최대 HP : +"..ability.hp
+				text = text.."\n"	
+				textCnt += 1
+			end
+			if ability.sp ~= 0 then
+				text = text.."최대 SP : +"..ability.sp	
+				text = text.."\n"
+				textCnt += 1
+			end
+			if ability.power ~= 0 then
+				text = text.."공격력 : +"..ability.power
+				text = text.."\n"	
+				textCnt += 1
+			end
+			if ability.defense ~= 0 then
+				text = text.."방어력 : +"..ability.defense	
+				text = text.."\n"
+				textCnt += 1
+			end
+			if ability.skill_Damage ~= 0 then
+				text = text.."스킬피해 : +"..ability.skill_Damage.."%"
+				text = text.."\n"	
+				textCnt += 1
+			end
+			if ability.critical ~= 0 then
+				text = text.."크리티컬 : +"..ability.critical.."%"
+				text = text.."\n"
+				textCnt += 1
+			end
+			if ability.critical_Damage ~= 0 then
+				text = text.."크리티컬피해 : +"..ability.critical_Damage.."%"
+				text = text.."\n"
+				textCnt += 1
+			end
+			self.Entity.UITransformComponent.RectSize.y += textCnt * self.desc.TextComponent.FontSize
+			self.desc.TextComponent.Text = text
+			
+			if equipmentInfo.partType == "무기" then
+				self:SetSkill(uiItemSlot.skills)
+			end
+		end
+	end
+
+end

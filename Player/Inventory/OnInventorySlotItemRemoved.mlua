@@ -1,0 +1,10 @@
+@Event
+script OnInventorySlotItemRemoved extends EventType
+
+	property integer itemIndex = 0
+
+	property integer inventoryIndex = 0
+
+	property integer totalItemCount = 0
+
+end

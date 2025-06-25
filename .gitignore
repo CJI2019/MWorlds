@@ -1,0 +1,65 @@
+# Visual Studio 관련 파일
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 빌드 결과물
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Visual C++ 캐시 파일
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio 프로파일링 결과
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Visual Studio 임시 파일
+*.tlog
+*.log
+*.ilk
+*.pdb
+*.idb
+*.obj
+*.pch
+*.res
+*.manifest
+*.exp
+*.lastbuildstate
+
+# DirectX 관련 임시 파일
+*.cso
+*.hlsl.h
+
+# Windows 시스템 파일
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 기타 임시 파일
+*.bak
+*.tmp
+*~
+*.swp 
+*.csv
+*.userdataset
+*.codeblock
+*.directory
+*.model
+*.material

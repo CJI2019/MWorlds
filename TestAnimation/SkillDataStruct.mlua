@@ -1,0 +1,10 @@
+@Struct
+script SkillDataStruct
+
+	property string SkillRUID = ""
+
+	property Vector2 SkillOffset = Vector2(0,0)
+
+	property number SkillDelay = 0
+
+end

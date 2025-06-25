@@ -1,0 +1,194 @@
+@Component
+script UIItemSlot extends Component
+
+	property integer itemCount = 0
+
+	property integer itemIndex = 0
+
+	property integer inventoryIndex = 0
+
+	property Entity equipTag = nil
+
+	property any ability = nil
+
+	property table skills = {}
+
+	method void SetData(integer itemId)
+		if itemId == 0 then
+			return
+		end
+		-- 슬롯에 아이템 정보를 설정함
+		self.itemIndex = itemId
+		local imageEntity = self.Entity:GetChildByName("img_slot")
+		local itemInfo = _GlobalData:GetItem(tostring(itemId))
+		imageEntity.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
+		
+		local txt_Item = self.Entity:GetChildByName("txt_itemcount")
+		local img_Shadow = self.Entity:GetChildByName("img_shadow")
+		
+		if itemInfo.type == "장비" then
+			img_Shadow.Visible = false
+			txt_Item.Visible = false
+		else
+			img_Shadow.Visible = true
+			txt_Item.Visible = true
+			txt_Item.TextComponent.Text = "0"
+		end
+		
+		--print("itemCount",itemCount)
+		-- 아이템 개수가 0보다 클 경우 슬롯을 보여주고, 아닐 경우 숨김
+	end
+
+	method void SetCount(integer count)
+		 -- 아이템 수량 변경
+		
+		self.itemCount = count
+		if self._T.textEntity == nil then
+		-- path로 찾으려면 형제 계층에는 자신과 똑같은 이름을 가진 엔티티는 존재해서는 안됨.
+			self._T.textEntity = self.Entity:GetChildByName("txt_itemcount")
+			self._T.img_shadow = self.Entity:GetChildByName("img_shadow")
+		end
+		self._T.textEntity.TextComponent.Text = tostring(count)
+		-- 아이템 개수가 0보다 클 경우 슬롯을 보여주고, 아닐 경우 숨김
+		if count > 0 then
+			self._T.textEntity:SetEnable(true)
+			self._T.img_shadow:SetEnable(true)
+		else
+			self._T.textEntity:SetEnable(false)
+			self._T.img_shadow:SetEnable(false)
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnInitialize()
+		
+	end
+
+	method void SetEquipTag(boolean isOn)
+		--log(self.inventoryIndex.."=> SetEquipTag is "..(isOn and "착용" or "해제"))
+		if self.equipTag == nil then
+		    --log(self.inventoryIndex.."=> tag is nil")
+		end
+		self.equipTag.Visible = isOn
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self._T.click = 0
+		self.equipTag = _EntityService:GetEntityByPath(self.Entity.Path.."/equipTag")
+	end
+
+	method void InitSlot()
+		self._T.textEntity:SetEnable(false)
+		self._T.img_shadow:SetEnable(false)
+		self.equipTag.Visible = false
+		self.itemIndex = 0
+		self.itemCount = 0
+		local imageEntity = self.Entity:GetChildByName("img_slot")
+		imageEntity.SpriteGUIRendererComponent.ImageRUID = "3e9d52ed52d64794bbd6f72bab8ee3d9"
+		
+		self._T.click = 0
+	end
+
+	method void ChangeItem(UIItemSlotRef other)
+		local my_ItemCount = self.itemCount
+		local my_ItemIndex = self.itemIndex
+		local my_IsEquipTag = self.equipTag.Visible
+		
+		local other_ItemCount = other.itemCount
+		local other_ItemIndex = other.itemIndex
+		local other_IsEquipTag = other.equipTag.Visible
+		
+		self:InitSlot()
+		other:InitSlot()
+		
+		self:SetData(other_ItemIndex)
+		other:SetData(my_ItemIndex)
+		
+		self:SetCount(other_ItemCount)
+		other:SetCount(my_ItemCount)
+		
+		self:SetEquipTag(other_IsEquipTag)
+		other:SetEquipTag(my_IsEquipTag)
+		
+		local temp_ability = self.ability
+		self.ability = other.ability
+		other.ability = temp_ability
+		
+		local temp_sklills = self.skills
+		self.skills = other.skills
+		other.skills = temp_sklills
+	end
+
+	method void ConstructAbility(integer itemLevel)
+		local item = _GlobalData:GetEquipmentItem(self.itemIndex)
+		local abilityInfo = _GlobalData:GetWeaponLevelAbility(item.rating,itemLevel)
+		
+		self.ability = abilityInfo
+		log(item.name.."의 능력치가 설정되었습니다.")
+	end
+
+	method void ConstructSkill(table skill)
+		if skill == nil then
+			return
+		end
+		
+		self.skills = skill
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		-- Parameters
+		local Entity = event.Entity
+		--------------------------------------------------------
+		--log(self.inventoryIndex)
+		local clickReset = function()
+			self._T.click = 0
+		end
+		
+		self._T.click = (self._T.click + 1) % 3
+		_TimerService:SetTimerOnce(clickReset,0.35)
+		if self._T.click == 2 then
+			_UserService.LocalPlayer.PlayerInventory:RequestSlotItemUse(self.inventoryIndex)
+			log(self.inventoryIndex.."사용")
+		end
+		
+		local onItemPicking = OnItemPicking()
+		onItemPicking.pickedEntity = self.Entity
+		_UserService.LocalPlayer:SendEvent(onItemPicking)
+	end
+
+	@EventSender("Self")
+	handler HandleUITouchEnterEvent(UITouchEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		if self.itemIndex ~= 0 then
+			_ItemUI:SetTargetEntity(self.Entity)
+		end
+	end
+
+	@EventSender("Self")
+	handler HandleUITouchExitEvent(UITouchExitEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		_ItemUI:SetTargetEntity(nil)
+	end
+
+end

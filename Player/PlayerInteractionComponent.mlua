@@ -1,0 +1,35 @@
+@Component
+script PlayerInteractionComponent extends Component
+
+	@Sync
+	property EntityRef targetnpc = nil
+
+	property number lastExchangeTime = 0
+
+	@ExecSpace("Server")
+	method void ItemTradeLogic(ItemInfo itemInfo)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+		    log('로컬 Client가 아닌 다른 Client에서 요청을 보냄')
+		    return
+		end
+		
+		-- 요청이 비정상적으로 반복되어 보내지지는 않았는지 재사용 대기 시간을 추가해 검증
+		if DateTime.UtcNow.Elapsed - self.lastExchangeTime < 1000 then
+		    log('지난 요청으로부터 1초가 지나지 않았습니다.')
+		    return
+		end
+		
+		if self.targetnpc == nil then
+		    log('트리거 npc가 없음')
+		    return
+		end
+		
+		self.targetnpc.NPCShopComponent:RequestItemTrade(itemInfo,self.Entity)
+	end
+
+	@ExecSpace("Server")
+	method void SetTargetNpc(EntityRef entity)
+		self.targetnpc = entity
+	end
+
+end

@@ -1,0 +1,18 @@
+@Struct
+script EquipmentItemInfo
+
+	property string name = ""
+
+	property integer rating = 0
+
+	property number power = 0
+
+	property string partType = ""
+
+	property boolean isTwoHand = false
+
+	property string ruid = ""
+
+	property string weaponType = ""
+
+end

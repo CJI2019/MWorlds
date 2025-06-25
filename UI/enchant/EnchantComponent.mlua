@@ -1,0 +1,243 @@
+@Component
+script EnchantComponent extends Component
+
+	property EntityRef frame_Main = "b003d96c-387d-4778-a3c0-8d270f626bf1"
+
+	property EntityRef img_EnchantEffect = "4c1fc5a1-8667-4bc7-9adf-307632116d96"
+
+	property EntityRef btn_Enchant = "062e16cc-b936-4cc3-ab1d-0862d71d8e87"
+
+	property SpriteGUIRendererComponentRef anim_Img_Success = "5ba4f163-1a20-40ec-86fe-5d0089e08059"
+
+	property SpriteGUIRendererComponentRef anim_Img_Fail = "2f4fc2fe-fc60-44e6-a179-4f33c64d2eb5"
+
+	property EntityRef uiPickedItem = "25b30292-91fb-4702-a49f-daa4253ed293"
+
+	property SpriteGUIRendererComponentRef img_Equipment = "a1648e91-2120-4ca3-9963-c0b7ed4ad2f4"
+
+	property integer enchantTarget_InventoryIndex = 0
+
+	property TextComponentRef txt_EnchantInfo = "139c6799-c5a8-48fb-9b7e-339d5aed0a6f"
+
+	property TextComponentRef txt_Cost = "c731ed3f-f26f-47bc-a547-99a2ee0ccf26"
+
+	property integer myMoneyCount = 0
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		--self:StartBarAction()
+		self.btn_Enchant:ConnectEvent(ButtonClickEvent,self.StartEnchant)
+		self.btn_Enchant.ButtonComponent.Enable = false
+		
+		self._T.beginPosition = self.Entity.UITransformComponent.anchoredPosition:Clone()
+		self.txt_EnchantInfo.Enable = false
+		
+		local btn_close = _EntityService:GetEntityByPath(self.Entity.Path.."/btn_close")
+		local close = function()
+			_UIController:KeyFunction(KeyboardKey.O)
+		end
+		btn_close:ConnectEvent(ButtonClickEvent,close)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void StartEnchant()
+		if _UIController.isEnchanting or self.enchantTarget_InventoryIndex == 0 then
+			return
+		end
+		
+		_UIController.isEnchanting = true
+		local timer = function()
+			_UIController.isEnchanting = false
+		end
+		self._T.enchantTimer = _TimerService:SetTimerOnce(timer,3)
+		
+		self.frame_Main.UIBarAction:StartAction()
+		--self.frame_Main.UIBarAction.Enable = true
+	end
+
+	method void UpdateEnchantInfoText()
+		self:InitEnchantUI()
+		
+		---@type UIItemSlot
+		local slot = self._T.curr_Slot
+		---@type EquipmentAbilityInfo
+		local curr_Ability = slot.ability
+		local equipmentInfo = _GlobalData:GetEquipmentItem(slot.itemIndex)
+		local next_ability = _GlobalData:GetWeaponLevelAbility(equipmentInfo.rating,curr_Ability.level + 1)
+		if next_ability == nil then
+			self.txt_EnchantInfo.Text = "더 이상 강화 할 수 없습니다."
+			self.txt_EnchantInfo.Enable = true
+			return
+		end
+		
+		local textCnt = 1
+		local text = "[LV : "..next_ability.level.."] 성공확률 : ".._GlobalData:GetEnchantProbability(curr_Ability.level).."%\n"
+		if next_ability.hp ~= 0 then
+			text = text.."최대 HP : +"..next_ability.hp
+			text = text.."\n"	
+			textCnt += 1
+		end
+		if next_ability.sp ~= 0 then
+			text = text.."최대 SP : +"..next_ability.sp	
+			text = text.."\n"
+			textCnt += 1
+		end
+		if next_ability.power ~= 0 then
+			text = text.."공격력 : +"..next_ability.power
+			text = text.."\n"	
+			textCnt += 1
+		end
+		if next_ability.defense ~= 0 then
+			text = text.."방어력 : +"..next_ability.defense	
+			text = text.."\n"
+			textCnt += 1
+		end
+		if next_ability.skill_Damage ~= 0 then
+			text = text.."스킬피해 : +"..next_ability.skill_Damage.."%"
+			text = text.."\n"	
+			textCnt += 1
+		end
+		if next_ability.critical ~= 0 then
+			text = text.."크리티컬 : +"..next_ability.critical.."%"
+			text = text.."\n"
+			textCnt += 1
+		end
+		if next_ability.critical_Damage ~= 0 then
+			text = text.."크리티컬피해 : +"..next_ability.critical_Damage.."%"
+			text = text.."\n"
+			textCnt += 1
+		end
+		self.txt_EnchantInfo.Text = text
+		self.txt_EnchantInfo.Enable = true
+		
+		self:SetTextCost(_GlobalData:GetEnchantCost(curr_Ability.level,equipmentInfo.rating))
+	end
+
+	method void InitEnchantUI()
+		self.txt_Cost.Text = ""
+		self.btn_Enchant.ButtonComponent.Enable = false
+		self.txt_EnchantInfo.Text = ""
+		self.txt_EnchantInfo.Enable = false
+	end
+
+	method void SetTextCost(integer cost)
+		self.txt_Cost.Text = tostring(cost)
+		
+		if self.myMoneyCount >= cost then
+			log(self.myMoneyCount.."메소를 가지고 있음. 필요한 메소는 "..cost)
+			self.btn_Enchant.ButtonComponent.Enable = true	
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Entity", "b003d96c-387d-4778-a3c0-8d270f626bf1")
+	handler HandleOnBarActionComplete(OnBarActionComplete event)
+		self.img_EnchantEffect.SpriteGUIRendererComponent.ImageRUID = "c017b197336741c081c00588f7b4d6a4"
+		self.img_EnchantEffect.Enable = true
+		_SoundService:PlaySound("9a13bf85ee7242d8a32ea357538c6501",1)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Entity", "4c1fc5a1-8667-4bc7-9adf-307632116d96")
+	handler HandleSpriteGUIAnimPlayerEndFrameEvent(SpriteGUIAnimPlayerEndFrameEvent event)
+		self.img_EnchantEffect.Enable = false
+		_UserService.LocalPlayer.PlayerEnchantComponent:RequestEnchant(self.enchantTarget_InventoryIndex)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnEnchantResult(OnEnchantResult event)
+		-- Parameters
+		local result = event.result
+		---------------------------------------------------------
+		if result == 1 then
+			self.anim_Img_Success.ImageRUID = "0fd67a228e904fd188e6d44901d39ead"
+			self.anim_Img_Success.Enable = true
+			_SoundService:PlaySound("07a156f100e045189c0481ec07785aba",1)
+			self:UpdateEnchantInfoText()
+		elseif result == 0 then
+			self.anim_Img_Fail.ImageRUID = "b8ace4371b0a4103b80a423812a1979a"
+			self.anim_Img_Fail.Enable = true
+			_SoundService:PlaySound("3522602059be4376a95c47c981ec0099",1)
+		end
+		
+		if self._T.enchantTimer ~= nil then
+			_TimerService:ClearTimer(self._T.enchantTimer)
+		end
+		_UIController.isEnchanting = false
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Entity", "72197b58-45c1-4f44-8a51-c87dfed55cf6")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ButtonComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		---------------------------------------------------------
+		if self.uiPickedItem.PickingItemComponent.pickedItem == nil then
+			return
+		end
+		
+		local picked_Item = self.uiPickedItem.PickingItemComponent.pickedItem
+		self.uiPickedItem.PickingItemComponent:DeActivate()
+		
+		if _UIController.isEnchanting then
+			return
+		end
+		
+		local item_Info = _GlobalData:GetItem(tostring(picked_Item.UIItemSlot.itemIndex))
+		if item_Info.type ~= "장비" then
+			return
+		end
+		
+		local slot = picked_Item.UIItemSlot
+		self._T.curr_Slot = slot
+		self:UpdateEnchantInfoText()
+		
+		self.enchantTarget_InventoryIndex = slot.inventoryIndex
+		self.img_Equipment.ImageRUID = item_Info.ruid
+		self.img_Equipment.Enable = true
+		--self.item_Index = tonumber(item_Info.item_Id)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleEntityEnabledInHierarchyChangedEvent(EntityEnabledInHierarchyChangedEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: MODEntity
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local EnabledInHierarchy = event.EnabledInHierarchy
+		-- local Entity = event.Entity
+		---------------------------------------------------------
+		if EnabledInHierarchy == false then
+			self:InitEnchantUI()
+			self.img_Equipment.Enable = false
+			self.anim_Img_Success.Enable = false
+			self.anim_Img_Fail.Enable = false
+			self.img_EnchantEffect.Enable = false
+			self.frame_Main.UIBarAction:DeActivate()
+			self.enchantTarget_InventoryIndex = 0
+			_UIController.isItemSlotSwapEnabled -= 1
+		else
+			self.Entity.UITransformComponent.anchoredPosition = self._T.beginPosition:Clone()
+			_UIController.isItemSlotSwapEnabled += 1
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnMoneyModified(OnMoneyModified event)
+		-- Parameters
+		local money_value = event.money_value
+		---------------------------------------------------------
+		self.myMoneyCount = money_value
+	end
+
+end

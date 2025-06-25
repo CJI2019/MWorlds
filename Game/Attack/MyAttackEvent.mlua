@@ -1,0 +1,8 @@
+@Event
+script MyAttackEvent extends EventType
+
+	property EntityRef attacker = nil
+
+	property string skillId = ""
+
+end

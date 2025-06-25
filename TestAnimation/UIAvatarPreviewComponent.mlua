@@ -1,0 +1,114 @@
+@Component
+script UIAvatarPreviewComponent extends Component
+
+	property EntityRef UIRoot = "3d68fc76-3f90-4e72-a153-c276a39390c8"
+
+	property ScrollLayoutGroupComponentRef UIScrollRoot = "0aed32e1-56ef-4572-8994-e9bf349ccf86"
+
+	property string UIItemModelID = "model://6568073e-3e29-49ed-9532-97a5a11b0ea1"
+
+	property any SkillDatas = nil
+
+	property AvatarGUIRendererComponentRef AvatarGUIRenderer = "1d4e1de0-0b9f-4b86-b917-1d57921a59bd"
+
+	property UISkillEffectComponentRef SkillEffect = "8cdde67f-0c48-4632-9ef1-f7a0954edb59"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		    self.UIRoot.Enable  = false
+		    self:LoadData()
+	end
+
+	@ExecSpace("ClientOnly")
+	method void AddUIScrollWeaponItem(number index, any row)
+		    local id = row:GetItem("dataID")
+		    local weaponRUID = row:GetItem("weaponRUID")
+		--log(weaponRUID)
+		    local spawnPos = Vector3.zero
+		    spawnPos.y += index * -10
+		
+		    local spawn = _SpawnService:SpawnByModelId(self.UIItemModelID, id, spawnPos, self.UIScrollRoot.Entity)
+		
+		spawn.UIWeaponItemComponent:SetAvatarPreviewComponentRef(self)
+		spawn.UIWeaponItemComponent:SetData(id, weaponRUID)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void LoadData()
+		    self.SkillDatas = _DataService:GetTable("SkillDatas")
+		wait(1)
+		    if self.SkillDatas ==nil then log_error("failed to load table") return end
+		
+		    for i = 1,self.SkillDatas:GetRowCount() do
+		    	local row = self.SkillDatas:GetRow(i)
+		    	self:AddUIScrollWeaponItem(i, row)
+		    end
+	end
+
+	method void OnSelectButton(UIWeaponItemComponentRef weaponItemComp, string dataID)
+		    self.Entity:SendEvent(UIWeaponSelectEvent(weaponItemComp))
+		
+		    local row = self.SkillDatas:FindRow("dataID", dataID)
+		
+		    if row == nil then log_error("invalid dataID") return end
+		
+		    local id = row:GetItem("dataID")
+		    local weaponRUID = row:GetItem("weaponRUID")
+		    local is2handWeapon = row:GetItem("is2handWeapon") == "true"
+		
+		local skillData = SkillDataStruct(
+			row:GetItem("skillRUID"),
+			Vector2(
+				tonumber(row:GetItem("skillOffsetX")),
+				tonumber(row:GetItem("skillOffsetY"))
+			),
+			row:GetItem("skillDelay")
+		)
+		
+		    self.SkillEffect:SetSkill(skillData)
+		    self.SkillEffect:PlaySkill()
+		
+		self:SetAvatarAnimation(id, weaponRUID, is2handWeapon)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void SetAvatarAnimation(string dataID, string weaponRUID, boolean is2handWeapon)
+		    --  Avatar weapon equip
+		    local costume = self.AvatarGUIRenderer.Entity.CostumeManagerComponent
+		    if costume ~=  nil then
+		
+		    	local oneHandRUID = ""
+		    	local twoHandRUID = ""
+		
+		    	if is2handWeapon then
+		    		twoHandRUID = weaponRUID
+		    	else
+		    		oneHandRUID = weaponRUID
+		    	end
+		
+		    	costume.CustomOneHandedWeaponEquip = oneHandRUID
+		    	costume.CustomTwoHandedWeaponEquip = twoHandRUID
+		
+		    end
+		
+		    -- Avatar animation
+		    local body = self.AvatarGUIRenderer:GetBodyEntity()
+		
+		    local names = _ActionNameLogic:GetActionNameDatas(dataID)
+		    local event = ActionStateChangedEvent()
+		
+		    event.CoreActionName = names.CoreActionName
+		    event.PartsActionName = names.PartsActionName
+		
+		    event.PlayRate = 1
+		    event.PlayType = SpriteAnimClipPlayType.Onetime
+		
+		    body:SendEvent(event)
+	end
+
+	@EventSender("Entity", "69265294-c411-4717-9f19-2013803a1e42")
+	handler HandleTESTEvent(TESTEvent event)
+		log("UIAvatar")
+	end
+
+end

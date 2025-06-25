@@ -1,0 +1,4 @@
+@Event
+script OnBarActionComplete extends EventType
+
+end

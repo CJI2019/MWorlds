@@ -1,0 +1,360 @@
+@Component
+script PlayerQuestComponent extends Component
+
+	property table userQuestProgress = {}
+
+	property any userDataStorage = nil
+
+	property integer questCount = 0
+
+	property integer isFinishBeginPlay = 0
+
+	property EntityRef dialogUI = "1ba86c1d-30a4-4843-9e93-d9da43fc06f5"
+
+	property EntityRef dialogTextUI = "decf740a-5be7-442d-9e34-0d69cde57b1f"
+
+	property EntityRef interactionNpc = nil
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		self.userDataStorage = _DataStorageService:GetUserDataStorage(self.Entity.PlayerComponent.UserId)
+		
+		self.userDataStorage:DeleteAndWait("QuestData") -- 퀘스트 데이터 초기화
+		local errorCode , questQueryData = self.userDataStorage:GetAndWait("QuestData")
+		
+		if errorCode ~= 0 then
+			log("questQueryData load fail")
+			log(errorCode)
+		end
+		
+		if questQueryData == nil then
+			-- questQueryData 초기화
+			log("퀘스트 초기화")
+			self:InitQuestData()
+		else
+			-- 퀘스트 정보가 불려오고 나서 시작해야함.
+			self:UserQuestProgressDataDecode(questQueryData)
+		end
+		self.isFinishBeginPlay = 1 -- 0 : not beginplay, 1 : yes beginplay , 2 : mapenter
+		self:OnMapEnter(self.Entity.CurrentMap)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void UserQuestProgressDataDecode(string questQueryData)
+		-- QuestTable의 행 순서가 변경되면 오류가 발생하므로 변경하지 않도록 주의
+		-- 1퀘스트진행도,2퀘스트진행도 <- 퀘스트의 진행도만 저장하고 테이블의 순서가 변경되면 이 순서도 변경해야함.
+		-- 비용이 적게들기 때문에 이 방식을 사용하는데... 삽입은 그렇다 치더라도 삭제가 발생하면 삭제한 데이터 앞으로 당겨줘야함.
+		
+		local questProgressTable = _UtilLogic:Split(questQueryData,",")
+		local questTable = _DataService:GetTable("QuestTable")
+		self.questCount = questTable:GetRowCount()
+		local tempQuestHelpList = {}
+		
+		for i = 1, self.questCount do
+			local quest = questTable:GetRow(i)
+			local questId = quest:GetItem("id")
+			if questId == "" then
+				log(i.."-퀘스트가 존재하지 않습니다.")
+				self.questCount = i - 1 -- 퀘스트 테이블 마지막 요소에 비어있는 퀘스트가 있음.
+				break
+			end
+			
+			local questLoadStr = questProgressTable[i]
+			local questData = _UtilLogic:Split(questLoadStr,":")
+			local progress = tonumber(questData[1])
+			self.Entity.UserQuestManager:SetProgress(questId,progress) -- 진행도
+			if (progress == 1 or progress == 2) and _QuestManager:IsConversationQuest(questId) == true then
+				self.Entity.UserQuestManager:SetConversationQuest(questId)
+			end
+			
+			local qd_idx = 0
+			while true
+			do
+				qd_idx += 1
+				if questData[qd_idx] == nil then
+					break
+				end
+				--questData => [1,k,1,0,i,4,249]
+				if questData[qd_idx] == 'k' then
+		            --questData[qd_idx + 1] = mob_Id
+					--questData[qd_idx + 2] = current
+					local mob_Id = tonumber(questData[qd_idx + 1])
+					local current = tonumber(questData[qd_idx + 2])
+					local complete = _QuestManager:GetCompleteConditionCount(questId,"kill",mob_Id)
+					self.Entity.UserQuestManager:SetKillCondition(questId,mob_Id,complete,current)
+					qd_idx += 2
+		            --log(questData)
+				elseif questData[qd_idx] == 'i' then
+					--questData[qd_idx + 1] = item_Id
+					--questData[qd_idx + 2] = current
+					local item_Id = tonumber(questData[qd_idx + 1])
+					local current = tonumber(questData[qd_idx + 2])
+					local complete = _QuestManager:GetCompleteConditionCount(questId,"item",item_Id)
+					self.Entity.UserQuestManager:SetItemCondition(questId,item_Id,complete,current)
+					qd_idx += 2
+				elseif questData[qd_idx] == 'h' then
+					--questData[qd_idx + 1] = 알리미 순서 1 ~ 3
+		            tempQuestHelpList[questId] = tonumber(questData[qd_idx + 1])
+		            qd_idx += 1
+				end
+			end
+		end
+		
+		local questHelpList = {}
+		for questId, index in pairs(tempQuestHelpList) do
+			table.insert(questHelpList,questId)
+		end
+		table.sort(questHelpList,function(a,b)
+			return tempQuestHelpList[a] < tempQuestHelpList[b]
+		end)
+		self.Entity.UserQuestManager:SetQuestHelperList(questHelpList)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void InitQuestData()
+		local questTable = _DataService:GetTable("QuestTable")
+		self.questCount = questTable:GetRowCount()
+		
+		for i = 1, self.questCount do
+			-- [퀘스트고유번호 : 퀘스트진행상태(0,1,2)]
+			local quest = questTable:GetRow(i)
+			local questId = quest:GetItem("id")
+			if questId == "" then
+				log(i.."-퀘스트가 존재하지 않습니다.")
+				self.questCount = i - 1
+				break
+			end
+			self.Entity.UserQuestManager:SetProgress(questId,0)
+		    --log(questId.."-"..quest:GetItem("name").."-"..self.userQuestProgress[questId])
+		end
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SaveQuestData(boolean IsAsync)
+		local saveDataTable = {}
+		
+		local userQuestManager = self.Entity.UserQuestManager
+		if userQuestManager == nil then
+			log("userQuestManager is nil")
+			return 
+		end
+		local questHelpList = userQuestManager:GetQuestHelperList()
+		for i = 1, self.questCount do
+			local questId = "Q"..tostring(i)
+		    local progress = tostring(userQuestManager:GetProgress(questId))
+			local questLoadStr = progress
+			-- 조건식을 추가해야한다.
+			local condition = self.Entity.UserQuestManager:GetQuestCondition(questId)
+			if condition ~= nil then
+				if next(condition.killTable) ~= nil then
+					local killStr = ":k"
+					for mob_Id, mob_condition in pairs(condition.killTable) do
+						killStr = killStr..":"..mob_Id..":"..mob_condition["current"]
+					end
+					questLoadStr = questLoadStr..killStr
+				end
+			
+				if next(condition.itemTable) ~= nil then
+					local itemStr = ":i"
+					for item_Id, item_condition in pairs(condition.itemTable) do
+						itemStr = itemStr..":"..item_Id..":"..item_condition["current"]
+					end
+					questLoadStr = questLoadStr..itemStr
+				end
+			end
+			
+			if questHelpList[questId] ~= nil then
+				questLoadStr = questLoadStr..":h:"..questHelpList[questId]
+			end
+			
+			table.insert(saveDataTable,questLoadStr)
+		end
+		
+		local dataConcatString = table.concat(saveDataTable, ",")
+		--log(dataConcatString)
+		local datasave_Dict = {QuestData = dataConcatString}
+		if IsAsync then
+			self.userDataStorage:BatchSetAsync(datasave_Dict,function() log("퀘스트 진행도 저장 완료") end)
+		else
+			self.userDataStorage:BatchSetAndWait(datasave_Dict)
+			log("퀘스트 진행도 저장 완료")
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	method void OnMapEnter(Entity enteredMap)
+		if self.isFinishBeginPlay == 0 then
+			return
+		end
+		
+		local NPC = enteredMap:GetChildByName("NPC")
+		if NPC == nil then
+			log("이 맵에는 NPC가 없습니다.")
+			return
+		end
+		
+		local npcList = NPC.Children
+		
+		self._T.curMapNpcList = {}
+		
+		for index, npc in pairs(npcList) do
+		    --table.insert(self._T.curMapNpcList,npc)
+		
+			local questNpcComponent = npc.QuestNPCComponent
+			if questNpcComponent == nil then
+				continue
+			end
+			
+			local sc_QuestIdAndProgressTablePacket = {}
+			for _, questId in ipairs(questNpcComponent.questIdTable) do
+				if self._T.curMapNpcList[questId] == nil then
+					self._T.curMapNpcList[questId] = {}
+				end
+				table.insert(self._T.curMapNpcList[questId],npc) -- 현재 마을 NPC를 기억해둠.
+				local requiredQuestIds = _QuestManager:GetQuestInfo(questId):GetRequiredQuestIDTable()
+				
+				for i ,requireQuest in ipairs(requiredQuestIds) do -- 선행퀘 진행도
+					sc_QuestIdAndProgressTablePacket[requireQuest] = self.Entity.UserQuestManager:GetProgress(requireQuest)
+				end
+				
+				sc_QuestIdAndProgressTablePacket[questId] = self.Entity.UserQuestManager:GetProgress(questId)		
+			end	
+			questNpcComponent:SetQuestProgress(sc_QuestIdAndProgressTablePacket,self.Entity.PlayerComponent.UserId)
+		    --log(self.userQuestProgress[questId])
+		    --log(npc.Name.."-"..questNpcComponent.questProgress)
+		end
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	method void QuestInteraction(EntityRef npc)
+		local questNpcComp = npc.QuestNPCComponent
+		if questNpcComp == nil then
+			return
+		end
+		-- 선행퀘가 있어서 아직 보이지 않는 퀘스트는 복수 취급 x
+		-- 이미 보상 받은 퀘스트는 복수 취급 x
+		--local availableQuestCount = questNpcComp:GetAvailableQuestCount()
+		local availableQuestDict = questNpcComp:GetAvailableQuestDict()
+		
+		if availableQuestDict['count'] > 1 then
+			-- 복수의 퀘스트가 존재.
+			self.dialogUI.DialogComponent:OpenMultipleQuestUI(npc,availableQuestDict)
+			self.dialogUI:SetEnable(true)
+			return
+		end
+		
+		local questId = availableQuestDict['questTable'][1]
+		
+		-- 단일 퀘스트만 존재 할때.
+		--log(npc.Name.."- 현재 진행도 - "..questNpcComp.questProgress)
+		if questNpcComp.localUserQuestProgress[questId] == 0 then
+			self.dialogUI.DialogComponent:SetDialogData(npc,questId)
+			self.dialogUI:SetEnable(true)
+		elseif questNpcComp.localUserQuestProgress[questId] == 1 then
+			self.dialogUI.DialogComponent:SetDialogData(npc,questId)
+			self.dialogUI:SetEnable(true)
+		elseif questNpcComp.localUserQuestProgress[questId] == 2 then
+			self.dialogUI.DialogComponent:SetDialogData(npc,questId)
+			self.dialogUI:SetEnable(true)
+		else
+			log("progress is error")
+		end
+	end
+
+	@ExecSpace("Server")
+	method void QuestAccept(string questId)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		--log("<User> : "..senderUserId.." <QuestId> : "..questId.." <Progress> : "..self.userQuestProgress[questId])
+		
+		if self.Entity.UserQuestManager:GetProgress(questId) ~= 0 then
+		    return
+		end
+		local event = OnQuestProgressModify()
+		event.questId = questId
+		event.progress = 1
+		event.reason = "accept"
+		
+		local questInfo = _QuestManager:GetQuestInfo(questId)
+		if questInfo.questType["conversation"] == true then
+			event.progress = 2
+		end
+		
+		_QuestManager:SetUserQuestCondition(questId,self.Entity,senderUserId)
+		
+		--self.Entity.UserQuestManager:ClientAcceptQuest(questId,senderUserId)
+		-- 클라로 퀘스트 받았다는 내용을 전달해야함.
+		self:QuestProgressModifyEvent(event)
+	end
+
+	@ExecSpace("Server")
+	method void QuestComplete(string questId)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		--log("<User> : "..senderUserId.." <QuestId> : "..questId.." <Progress> : "..self.userQuestProgress[questId])
+		
+		if self.Entity.UserQuestManager:GetProgress(questId) ~= 2 then
+		    return
+		end
+		if _QuestManager:GiveQuestReward(questId,self.Entity) == false then
+			return
+		end
+		local completeEvent = OnQuestComplete()
+		completeEvent.questId = questId 
+		self.Entity:SendEvent(completeEvent)
+		
+		self.Entity.UserQuestManager:SetProgress(questId,3)
+		self:SyncNpcProgress(questId)
+	end
+
+	@ExecSpace("Multicast")
+	method void QuestProgressModifyEvent(OnQuestProgressModify event)
+		self.Entity:SendEvent(event)
+		
+		if self:IsServer() then
+			self.Entity.UserQuestManager:SetProgress(event.questId,event.progress)
+			self:SyncNpcProgress(event.questId)
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SyncNpcProgress(string questId)
+		if self._T.curMapNpcList[questId] == nil then
+			return
+		end
+		
+		for _, npc in ipairs(self._T.curMapNpcList[questId]) do
+			local sc_QuestIdAndProgressTablePacket = {}
+			sc_QuestIdAndProgressTablePacket[questId] = self.Entity.UserQuestManager:GetProgress(questId)
+			npc.QuestNPCComponent:SetQuestProgress(sc_QuestIdAndProgressTablePacket,self.Entity.PlayerComponent.UserId)
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Service", "UserService")
+	handler HandleUserLeaveEvent(UserLeaveEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UserService
+		-- Space: Server
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local ProfileCode = event.ProfileCode
+		local UserId = event.UserId
+		---------------------------------------------------------
+		
+		local thisUserId = self.Entity.PlayerComponent.UserId
+		if thisUserId ~= UserId then
+		   return
+		end
+		
+		if self.userDataStorage then
+		    self:SaveQuestData(false)
+		end
+	end
+
+end

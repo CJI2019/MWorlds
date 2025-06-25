@@ -1,0 +1,45 @@
+@Logic
+script WorldRule extends Logic
+
+	method boolean IsUpdate(EntityRef entity)
+		local users = _UserService:GetUsersByMapComponent(entity.CurrentMap.MapComponent)
+		    --log(#user_cnt)
+		if #users == 0 then
+		    --log(self.Entity.Name," - enable => false")
+		    --self.Entity.Enable = false
+			return false
+		end
+		return true
+	end
+
+	method any CreateShape(EntityRef entity)
+		local transform = entity.TransformComponent
+		
+		if transform == nil then
+			return nil
+		end
+		
+		local trigger = entity.TriggerComponent
+		local hit = entity.HitComponent
+		
+		if trigger == nil and hit == nil then
+			return nil
+		end
+		
+		local size = Vector2(0,0)
+		local offset = Vector2(0,0)
+		if trigger ~= nil then
+			size = trigger.BoxSize
+			offset = trigger.BoxOffset
+		else
+			size = hit.BoxSize
+			offset = hit.BoxOffset
+		end
+		
+		local pos = Vector2(transform.WorldPosition.x + offset.x,transform.WorldPosition.y + offset.y)
+		local shape = BoxShape(pos,size,0)
+		
+		return shape
+	end
+
+end

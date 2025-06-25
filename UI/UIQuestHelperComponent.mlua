@@ -1,0 +1,143 @@
+@Component
+script UIQuestHelperComponent extends Component
+
+	property table helperList = {}
+
+	property UserQuestManagerRef userQuestManager = nil
+
+	property integer help_Count = 0
+
+	property table activeOrder = {}
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.helperList[1] = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_helper_block1")
+		self.helperList[2] = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_helper_block2")
+		self.helperList[3] = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_helper_block3")
+		
+	end
+
+	method void AddQuest(string questId)
+		if self.help_Count >= 3 then
+			log("최대 개수에 도달하여 등록 불가능합니다.")
+			return
+		end
+		
+		for i,block in ipairs(self.helperList) do
+		    if block.Enable == true and block.UIQuestHelperBlockComponent.questId == questId then
+		        return
+		    end	
+		end
+		
+		if self.userQuestManager == nil then
+			self.userQuestManager = _UserService.LocalPlayer.UserQuestManager
+		end
+		
+		---@type EntityRef
+		local select_block = nil
+		for i,block in ipairs(self.helperList) do
+			if block.Enable == false then
+				select_block = block
+				break
+			end	
+		end
+		if select_block == nil then
+			return
+		end
+		self.help_Count += 1 -- 순서 유의 activeOrder nil 주의
+		self.activeOrder[self.help_Count] = select_block
+		select_block.Enable = true
+		
+		---@type UIQuestHelperBlockComponent
+		local helperBlock = select_block.UIQuestHelperBlockComponent
+		helperBlock:SetQuest(questId)
+		self:ServerSetHelperList() -- questId 할당 후 호출
+		
+		local condition = self.userQuestManager:GetQuestCondition(questId)
+		
+		if next(condition.killTable) ~= nil then
+			for mob_Id, mob_condition in pairs(condition.killTable) do
+				helperBlock:AddCondition(tostring(mob_Id),mob_condition,"kill")
+			end
+		end
+		
+		if next(condition.itemTable) ~= nil then
+			for item_Id, item_condition in pairs(condition.itemTable) do
+				helperBlock:AddCondition(tostring(item_Id),item_condition,"item")
+			end
+		end
+		
+		if self.help_Count ~= 1 then 
+			helperBlock:UIRePositioning(self.activeOrder[self.help_Count-1])
+		else
+			select_block.UITransformComponent.anchoredPosition.y = 0
+		end
+		--local a = "슬라임 : "
+		--local b = " / 2"
+		--
+		--self.txt_Condition.TextComponent.Text = a..self.help_Count..b
+	end
+
+	method void DeleteQuest(string questId)
+		if #self.activeOrder == 0 then
+			return
+		end
+		
+		if self.userQuestManager == nil then
+			self.userQuestManager = _UserService.LocalPlayer.UserQuestManager
+		end
+		
+		local deleteBlock = nil
+		for i, block in pairs(self.activeOrder) do
+			if block.UIQuestHelperBlockComponent.questId == questId then
+				deleteBlock = block
+				table.remove(self.activeOrder,i)
+				self.help_Count -= 1
+				break
+			end
+		end
+		if deleteBlock == nil then
+			return
+		end
+		self:ServerSetHelperList()
+		
+		for i, block in pairs(self.activeOrder) do
+			local cur_block = block.UIQuestHelperBlockComponent
+			if i ~= 1 then 
+				cur_block:UIRePositioning(self.activeOrder[i-1])
+			else
+				block.UITransformComponent.anchoredPosition.y = 0
+			end
+		end
+		
+		local helperBlock = deleteBlock.UIQuestHelperBlockComponent
+		helperBlock:Init()
+		deleteBlock.Enable = false		
+		return
+	end
+
+	method void ServerSetHelperList()
+		local list = {} --순서가 보장되어야함.
+		for i, block in ipairs(self.activeOrder) do
+			table.insert(list,block.UIQuestHelperBlockComponent.questId)
+		end
+		_UserService.LocalPlayer.UserQuestManager:SetQuestHelperList(list)
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestHelp(OnQuestHelp event)
+		-- Parameters
+		 local questId = event.questId
+		---------------------------------------------------------
+		self:AddQuest(questId)
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestComplete(OnQuestComplete event)
+		-- Parameters
+		 local questId = event.questId
+		---------------------------------------------------------
+		self:DeleteQuest(questId)
+	end
+
+end

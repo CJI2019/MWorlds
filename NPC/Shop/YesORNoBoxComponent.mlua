@@ -1,0 +1,35 @@
+@Component
+script YesORNoBoxComponent extends Component
+
+	property EntityRef okbutton = nil
+
+	property EntityRef nobutton = nil
+
+	property any itemInfo = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.okbutton = _EntityService:GetEntityByPath(self.Entity.Path.."/OKButton")
+		self.nobutton = _EntityService:GetEntityByPath(self.Entity.Path.."/NoButton")
+		
+		local okfunc = function()
+			self.Entity:SetEnable(false)
+			local event = BuyItemEvent()
+			log("BuyItemEvent")
+			event.name = self.itemInfo.name
+			event.shopItemId = self.itemInfo.shopItemId
+			self.okbutton:SendEvent(event)
+		end
+		self.okbutton:ConnectEvent(ButtonClickEvent, okfunc)
+		
+		local nofunc = function()
+			self.Entity:SetEnable(false)
+		end
+		self.nobutton:ConnectEvent(ButtonClickEvent, nofunc)
+	end
+
+	method void SetItemInfo(ItemInfo itemInfo)
+		self.itemInfo = itemInfo
+	end
+
+end

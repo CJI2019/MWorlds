@@ -1,0 +1,175 @@
+@Component
+script WeaponComponent extends Component
+
+	property any weapon = nil
+
+	property PlayerAttackRef playerAttack = nil
+
+	property CommonPlayerControllerRef commonPlayerController = nil
+
+	property any lastFrameEventHandler = nil
+
+	method void OnBeginPlay()
+		if self:IsClient() then
+			self.commonPlayerController = self.Entity.CommonPlayerController
+		else
+				
+		end
+		self.playerAttack = self.Entity.PlayerAttack
+	end
+
+	@ExecSpace("Server")
+	method void RequestUseSKill(string key)
+		if self.Entity.PlayerComponent.UserId ~= senderUserId then
+			return
+		end
+		
+		local weapon = self.weapon
+		--log(weapon.skillZ["id"])
+		
+		local skillId = nil
+		if key == "Z" then
+			skillId = weapon.skillZ["id"]
+			self:SyncAvatarAction(tonumber(weapon.skillZ["id"]))
+		elseif key == "X" then
+			skillId = weapon.skillX["id"]
+			self:SyncAvatarAction(tonumber(weapon.skillX["id"]))
+		elseif key == "C" then
+		    --skillId = weapon.skillC["id"]
+		    --self:SyncAvatarAction(weapon.skillC["id"])
+		end
+		
+		if skillId == nil then
+		    --log("스킬이 존재하지 않습니다.")
+			return
+		end
+		---@type SkillInfo
+		local skillInfo = _GlobalData:GetSkillInfo(tostring(skillId))
+		if self.Entity.AbilityComponent:UseSP(skillInfo.rating) == false then
+			self:SendFailedSkillUseMsg(senderUserId)
+			return
+		end
+		
+		local effectSpawnPos = Vector3(0,0,0)
+		
+		local option = {FlipX = (self.Entity.PlayerControllerComponent.LookDirectionX >= 0.0  and true or false)
+			,PlayRate = 1.0
+		}
+		_EffectService:PlayEffectAttached(skillInfo.skillRUID, self.Entity, effectSpawnPos, 0, Vector3.one, false,option)
+		self.playerAttack:CreateSkillAttack(skillInfo.id)
+	end
+
+	@ExecSpace("Client")
+	method void SyncAvatarAction(integer skill_ID)
+		local skillInfo = _GlobalData:GetSkillInfo(tostring(skill_ID))
+		if skillInfo == nil then
+			local s = 2
+		end
+		local stateEvent = ActionStateChangedEvent()
+		stateEvent.CoreActionName = skillInfo.coreActionName
+		stateEvent.PartsActionName = skillInfo.partsActionName
+		stateEvent.PlayRate = skillInfo.actionPlayRate
+		stateEvent.PlayType = SpriteAnimClipPlayType.Onetime
+		
+		local body = self.Entity.AvatarRendererComponent:GetBodyEntity()
+		if self.Entity.PlayerComponent.UserId == _UserService.LocalPlayer.PlayerComponent.UserId then
+			self.commonPlayerController.isAttack = true
+			self.Entity.StateComponent.Enable = false
+			self.Entity.PlayerControllerComponent.Enable = false
+			self.lastFrameEventHandler = body:ConnectEvent(SpriteAnimPlayerEndFrameEvent,self.LastActionFrame)
+		end
+		
+		body:SendEvent(stateEvent)
+	end
+
+	method void SetWeapon(EquipmentItemStruct item)
+		self.weapon = item 
+	end
+
+	@ExecSpace("ClientOnly")
+	method void LastActionFrame(any event)
+		local delay = function()
+			local body = self.Entity.AvatarRendererComponent:GetBodyEntity()
+			body:DisconnectEvent(SpriteAnimPlayerEndFrameEvent,self.lastFrameEventHandler)
+			
+			self.commonPlayerController.isAttack = false
+			self.Entity.StateComponent.Enable = true
+		    if self.Entity.PlayerComponent:IsDead() == false then
+				self.Entity.PlayerControllerComponent.Enable = true		
+			end
+		end
+		_TimerService:SetTimerOnce(delay,0.16)
+	end
+
+	@ExecSpace("Client")
+	method void SendFailedSkillUseMsg()
+		local event = SystemMsgEvent()
+		event.msg = "SP 가 부족합니다."
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void ClientRequestUseSkill(string cmd)
+		self.Entity.PlayerControllerComponent.Enable = false	
+		self:RequestUseSKill(cmd)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void NormalAttack()
+		if self.weapon == nil then
+			local event = SystemMsgEvent()
+			event.msg = "무기를 장착하지 않아 공격할 수 없습니다."
+			self.Entity:SendEvent(event)
+		    --return
+		end
+		self.Entity.PlayerControllerComponent:ActionAttack()
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnEquipItem(OnEquipItem event)
+		-- Parameters
+		local inventoryIndex = event.inventoryIndex
+		-- local itemId = event.itemId
+		local willEquip = event.willEquip
+		-- local isChange = event.isChange
+		local part = event.part
+		---------------------------------------------------------
+		if willEquip == false and part ~= "무기" then
+			return
+		end
+		
+		---@type EquipmentItemStruct
+		local item = self.Entity.PlayerInventory:GetItem(inventoryIndex)
+		
+		self:SetWeapon(item)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyDownEvent(KeyDownEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local key = event.key
+		---------------------------------------------------------
+		
+		if self.weapon == nil or self.Entity.PlayerControllerComponent.Enable == false then
+		    --log("self.weapon is nil")
+		    return
+		end
+		
+		if event.key == KeyboardKey.Z then
+			self:ClientRequestUseSkill("Z")
+		elseif event.key == KeyboardKey.X then
+			self:ClientRequestUseSkill("X")
+		elseif event.key == KeyboardKey.C then
+			self:ClientRequestUseSkill("C")
+		end
+		
+	end
+
+end

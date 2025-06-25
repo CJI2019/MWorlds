@@ -1,0 +1,4 @@
+@Event
+script OnTakeDamage extends EventType
+
+end

@@ -1,0 +1,159 @@
+@Component
+script UIQuestHelperBlockComponent extends Component
+
+	property string questId = ""
+
+	property EntityRef txt_title = nil
+
+	property EntityRef txt_condition = nil
+
+	property EntityRef root_helper = nil
+
+	property integer condition_Count = 0
+
+	property table type_Id_TextDict = {}
+
+	property EntityRef btn_close = nil
+
+	property EntityRef img_complete = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.txt_title = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_title/txt_title")
+		self.txt_condition = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_condition")
+		self.img_complete = _EntityService:GetEntityByPath(self.Entity.Path.."/img_complete")
+		-- self.type_Id_TextIndexDict
+		-- [item][item_Id] = text 접근 
+		
+		-- 닫기 버튼 눌렀을 때 사용할 용도
+		self.root_helper = _EntityService:GetEntityByPath("/ui/PopupGroup/frame_helper")
+		self.btn_close = _EntityService:GetEntityByPath(self.Entity.Path.."/btn_close")
+		local btnClickFunc = function()
+			self.root_helper.UIQuestHelperComponent:DeleteQuest(self.questId)
+		end
+		self.btn_close:ConnectEvent(ButtonClickEvent,btnClickFunc)
+		
+		self._T.height = self.txt_condition.UITransformComponent.RectSize.y
+		self._T.conditionTextTable = {self.txt_condition}
+	end
+
+	method void SetQuest(string questId)
+		--log(questId)
+		self.questId = questId
+		self.txt_title.TextComponent.Text = _QuestManager:GetQuestTitle(questId)
+		self:ChangeBlockState(_UserService.LocalPlayer.UserQuestManager.progress_Dict[questId])
+	end
+
+	method void AddCondition(string id, any condition, string type)
+		local str = ""
+		
+		if type == "kill" then
+			str = _GlobalData:GetMonsterName(id).." : "..condition["current"].." / "..condition["complete"]
+		elseif type == "item" then
+			str = _GlobalData:GetItemName(id).." : "..condition["current"].." / "..condition["complete"]
+		else
+			log("type error")
+			return
+		end
+		
+		self.condition_Count += 1
+		if self.condition_Count > #self._T.conditionTextTable then
+			self._T.conditionTextTable[self.condition_Count] = _SpawnService:SpawnByEntity(self.txt_condition,self.txt_condition.Name,Vector3.zero,self.Entity)
+			self._T.conditionTextTable[self.condition_Count].UITransformComponent.anchoredPosition.x = self._T.conditionTextTable[self.condition_Count - 1].UITransformComponent.anchoredPosition.x
+			self._T.conditionTextTable[self.condition_Count].UITransformComponent.anchoredPosition.y = self._T.conditionTextTable[self.condition_Count - 1].UITransformComponent.anchoredPosition.y 
+			- self._T.conditionTextTable[self.condition_Count - 1].UITransformComponent.RectSize.y
+		end
+		
+		if self.condition_Count > 1 then
+			-- 칸을 추가 할때마다 UI크기를 늘림. 조건 텍스트를 개행은 생각하지 않는다.
+			self.Entity.UITransformComponent.RectSize.y += self._T.conditionTextTable[self.condition_Count].UITransformComponent.RectSize.y
+		end
+		
+		local cur_conditionText = self._T.conditionTextTable[self.condition_Count]
+		cur_conditionText.TextComponent.Text = str
+		cur_conditionText.Enable = true
+		
+		-- 몹,아이템 ID를 참조해서 어떤 텍스트를 조정할지 정한다. HelperBlock컴포넌트는 블럭 하나당 퀘스트 하나를 다룸.
+		if self.type_Id_TextDict[type] == nil then
+			self.type_Id_TextDict[type] = {}
+		end
+		self.type_Id_TextDict[type][id] = cur_conditionText
+		
+	end
+
+	method void UIRePositioning(EntityRef frontEntity)
+		self.Entity.UITransformComponent.anchoredPosition.y = frontEntity.UITransformComponent.anchoredPosition.y - frontEntity.UITransformComponent.RectSize.y
+	end
+
+	method void SetCondition(string id, any condition, string type)
+		if self.type_Id_TextDict["kill"] and type == "kill" then
+			self.type_Id_TextDict["kill"][id].TextComponent.Text = _GlobalData:GetMonsterName(id).." : "..condition["current"].." / "..condition["complete"]
+		elseif self.type_Id_TextDict["item"] and type == "item" then
+			self.type_Id_TextDict["item"][id].TextComponent.Text = _GlobalData:GetItemName(id).." : "..condition["current"].." / "..condition["complete"]
+		end 
+	end
+
+	method void Init()
+		for i,txt in ipairs(self._T.conditionTextTable) do
+			txt.Enable = false	
+		end
+		self.condition_Count = 0
+		self.type_Id_TextDict = {}
+		self.Entity.UITransformComponent.RectSize.y = 70
+	end
+
+	method void ChangeBlockState(integer progress)
+		if progress == 1 then
+		    --self.Entity.SpriteGUIRendererComponent.Color = Color(0,0,0,self.Entity.SpriteGUIRendererComponent.Color.a)
+			self.img_complete.Enable = false
+		elseif progress == 2 then
+		    --self.Entity.SpriteGUIRendererComponent.Color = Color(55,0,0,self.Entity.SpriteGUIRendererComponent.Color.a)
+			self.img_complete.Enable = true
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestConditionModify(OnQuestConditionModify event)
+		if self.Entity.Enable == false then
+			return
+		end
+		
+		local condition = _UserService.LocalPlayer.UserQuestManager:GetQuestCondition(self.questId)
+		if condition == nil then
+			-- 알림창에서 퀘스트가 지워져야하는데 안지워짐
+			return
+		end
+		
+		if next(condition.killTable) ~= nil then
+			for mob_Id, mob_condition in pairs(condition.killTable) do
+				self:SetCondition(tostring(mob_Id),mob_condition,"kill")
+			end
+		end
+		
+		if next(condition.itemTable) ~= nil then
+			for item_Id, item_condition in pairs(condition.itemTable) do
+				self:SetCondition(tostring(item_Id),item_condition,"item")
+			end
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
+		-- Parameters
+		local questId = event.questId
+		local progress = event.progress
+		local reason = event.reason
+		---------------------------------------------------------
+		if reason == "accept" then
+			self.root_helper.UIQuestHelperComponent:AddQuest(questId)
+		end
+		
+		if questId == self.questId then
+			self:ChangeBlockState(progress)	
+		end
+		
+	end
+
+end

@@ -1,0 +1,143 @@
+@Component
+script NPCShopComponent extends Component
+
+	property EntityRef uishop = "dc4dcbe4-903d-4b4c-8920-4df2f4d569fc"
+
+	property integer click = 0
+
+	property EntityRef confirmbutton = "d86ead7e-d6ed-4a33-abf5-55929fa169d6"
+
+	property table itemnamelist = {}
+
+	property table iteminfolist = {}
+
+	property boolean clientLoad = false
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		self:ShopItemDataTableLoad()
+		
+		--self.confirmbutton:DisconnectEvent(ButtonClickEvent,buttonclickeventHandle)
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void RequestItemTrade(ItemInfo itemInfo, EntityRef player)
+		log(itemInfo.name.." 아이템 보안 검증을 수행합니다.")
+		local myItemInfo = self.iteminfolist[itemInfo.shopItemId]
+		
+		if myItemInfo == nil then
+			log("this item is not valid")
+			return
+		end
+		
+		if myItemInfo.name ~= itemInfo.name then
+			log("not same item")
+			return
+		end
+		
+		log(myItemInfo.name.."은 "..myItemInfo.buyprice.."메소 입니다.")
+		
+		if player.PlayerInventory == nil then
+			return
+		end
+		
+		if player.PlayerInventory:GetMoney() >= myItemInfo.buyprice then
+			if player.PlayerInventory:ModifyItem(myItemInfo.item_Id,100) then
+				player.PlayerInventory:ModifyMoney(-myItemInfo.buyprice)	
+				log("구매완료.")
+			end
+			
+		else
+			log("메소가 부족합니다.")
+		end
+		
+		return
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnMapEnter(Entity enteredMap)
+		--if self.clientLoad == true then
+		--    return
+		--end
+		
+		local confirm = function(event)
+			log("플레이어가 "..event.name.."을 구매요청을 보냅니다.")
+			local itemInfo = ItemInfo()
+			itemInfo.name = event.name
+			itemInfo.shopItemId = event.shopItemId
+			_UserService.LocalPlayer.PlayerInteractionComponent:ItemTradeLogic(itemInfo)
+		end
+		self._T.buttonclickeventHandle = self.confirmbutton:ConnectEvent(BuyItemEvent,confirm)
+		--log("Enter")
+		self:ShopItemDataTableLoad()
+		self.clientLoad = true
+	end
+
+	method void ShopItemDataTableLoad()
+		local shopdataset = _DataService:GetTable("ItemDataTable")  
+		if shopdataset ~= nil then
+			self.itemnamelist = {
+				"빨간포션" , "파란포션","장난감 칼" , "물컹물컹한 액체",
+				"슬라임의 방울"
+			}
+			for shopItemId, name in ipairs(self.itemnamelist) do
+		        --log(index, value)	
+				local itemelement = shopdataset:FindRow("name",name)
+				if itemelement == nil then
+					log(name.." is not element")
+					continue
+				end
+		
+				local itemdata = ItemInfo()
+				
+				itemdata.ruid = itemelement:GetItem("IconRUID")
+				itemdata.buyprice = tonumber(itemelement:GetItem("buy"))
+				itemdata.sellprice = tonumber(itemelement:GetItem("sell"))
+				itemdata.description = itemelement:GetItem("desc")
+				itemdata.name = name
+				itemdata.shopItemId = shopItemId
+				itemdata.item_Id = tonumber(itemelement:GetItem("ID"))
+				self.iteminfolist[shopItemId] = itemdata
+			end
+		else
+			log("ShopDataTable load fail")
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnMapLeave(Entity leftMap)
+		self.confirmbutton:DisconnectEvent(BuyItemEvent,self._T.buttonclickeventHandle)
+		--log("leave")
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleTouchEvent(TouchEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: TouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		local InitClick = function()
+			self.click = 0
+		end
+		self.click += 1
+		
+		_TimerService:SetTimerOnce(InitClick,0.3)
+		
+		if self.click == 2 then
+			local uishopinventory = self.uishop.UIShopInventory
+			if uishopinventory then
+				uishopinventory:ShopUpdate(self.iteminfolist)
+			end
+			_UserService.LocalPlayer.PlayerInteractionComponent:SetTargetNpc(self.Entity)
+			self.uishop:SetEnable(true)
+		end
+	end
+
+end

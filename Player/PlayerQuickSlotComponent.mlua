@@ -1,0 +1,193 @@
+@Component
+script PlayerQuickSlotComponent extends Component
+
+	property table quickSlotKey_Table = {}
+
+	property table quickSlotKey_ValidCheck_Table = {}
+
+	property table inventoryIndexAndKey = {}
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SaveQuickSlot()
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void LoadQuickSlot()
+		
+	end
+
+	@ExecSpace("Server")
+	method void SetQuickSlotRequest(OnAddQuickSlot event)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId then
+			return
+		end
+		
+		---@type ItemStruct
+		local item_Struct = nil
+		
+		if event.inventory_Index == -1 then
+			local otherInventoryIndex = self.Entity.PlayerInventory:GetInventoryIndex(event.item_Id)
+			item_Struct = self.Entity.PlayerInventory:GetItem(otherInventoryIndex)
+			self.quickSlotKey_Table[event.strKey_Code] = item_Struct -- 아이템 참조
+			self.inventoryIndexAndKey[otherInventoryIndex] = event.strKey_Code
+		else
+			item_Struct = self.Entity.PlayerInventory:GetItem(event.inventory_Index)
+			self.quickSlotKey_Table[event.strKey_Code] = item_Struct
+			self.inventoryIndexAndKey[item_Struct.inventoryIndex] = event.strKey_Code
+		end
+		self:SendAddQuickSlot(event)
+		
+		local getTotalItemCountEvent = OnGetTotalItemCount()
+		getTotalItemCountEvent.item_Index = item_Struct.itemId
+		getTotalItemCountEvent.totalItemCount = self.Entity.PlayerInventory:GetItemCount(item_Struct.itemId)
+		self:SendGetTotalItemCount(getTotalItemCountEvent)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendAddQuickSlot(OnAddQuickSlot event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendRemoveQuickSlot(OnRemoveQuickSlot event)
+		self.Entity:SendEvent(event)
+		
+		if self:IsServer() then
+		    self.inventoryIndexAndKey[event.inventory_Index] = nil
+			self.quickSlotKey_Table[event.strKey_Code] = nil	
+		end
+	end
+
+	@ExecSpace("Server")
+	method void QuickSlotItemUse(string strKey)
+		local key = strKey
+		if self.quickSlotKey_Table[key] == nil then
+			return
+		end
+		
+		---@type ItemStruct
+		local item_Struct = self.quickSlotKey_Table[key]
+		log(item_Struct.itemId.."를 단축슬롯으로 사용합니다.")
+		self.Entity.PlayerInventory:SlotItemUse(item_Struct.inventoryIndex)
+	end
+
+	@ExecSpace("Multicast")
+	method void SendGetTotalItemCount(OnGetTotalItemCount event)
+		self.Entity:SendEvent(event)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleOnSetQuickSlot(OnAddQuickSlot event)
+		local item_Id = event.item_Id
+		local inventory_Index = event.inventory_Index
+		local key_Code = event.strKey_Code
+		---------------------------------------------------------
+		local key = KeyboardKey.CastFrom(key_Code)
+		self.quickSlotKey_ValidCheck_Table[key] = true
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyDownEvent(KeyDownEvent event)
+		local key = event.key
+		---------------------------------------------------------
+		if self.quickSlotKey_ValidCheck_Table[key] == nil or self.Entity.PlayerComponent:IsDead() then
+		    return
+		end
+		
+		self:QuickSlotItemUse(key)
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnInventoryItemRemoved(OnInventorySlotItemRemoved event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		local inventoryIndex = event.inventoryIndex
+		local totalItemCount = event.totalItemCount
+		---------------------------------------------------------
+		local strKey = self.inventoryIndexAndKey[inventoryIndex]
+		if strKey == nil then
+			return
+		end
+		if totalItemCount > 0 then
+			-- 해당 단축키에 연결된 인벤토리 칸의 아이템이 삭제된다.
+			-- 이때 똑같은 아이템이 다른 칸에 남아 있다면 그 아이템으로 연결한다.
+			local otherInventoryIndex = self.Entity.PlayerInventory:GetInventoryIndex(itemIndex)
+			local item_Struct = self.Entity.PlayerInventory:GetItem(otherInventoryIndex)
+			self.quickSlotKey_Table[strKey] = item_Struct -- 아이템의 참조를 소유한다.
+		else
+			local removeEvent = OnRemoveQuickSlot()
+			removeEvent.inventory_Index = inventoryIndex
+			removeEvent.item_Id = itemIndex
+			removeEvent.strKey_Code = strKey
+			self:SendRemoveQuickSlot(removeEvent)
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnInventorySlotChange(OnInventorySlotChange event)
+		---- Parameters
+		local slotA_Inventory_Index = event.slotA_Inventory_Index
+		local slotB_Inventory_Index = event.slotB_Inventory_Index
+		-----------------------------------------------------------
+		local keyA = self.inventoryIndexAndKey[slotA_Inventory_Index]
+		local keyB = self.inventoryIndexAndKey[slotB_Inventory_Index]
+		
+		self.inventoryIndexAndKey[slotA_Inventory_Index] = keyB
+		self.inventoryIndexAndKey[slotB_Inventory_Index] = keyA
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnInventoryModified(OnInventoryModified event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		local itemCount_Table = event.itemCount_Table
+		local inventoryIndex_Table = event.inventoryIndex_Table
+		local totalCount = event.total_ItemCount
+		-----------------------------------------------------------
+		
+		--for key,item in pairs(self.quickSlotKey_Table) do
+		--    ---@type ItemStruct
+		--    local item_Struct = item
+		--    if item_Struct.itemId == itemIndex then
+		--        -- 단축 슬롯의 개수를 갱신하기 위함.
+		--        -- 단축 슬롯에 Set을 할 당시에 
+		--        for pos,inv in ipairs(inventoryIndex_Table) do
+		--            if inv == item_Struct.inventoryIndex then
+		--                
+		--            end
+		--        end
+		--        
+		--    end
+		--end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleOnRemoveQuickSlot(OnRemoveQuickSlot event)
+		-- Parameters
+		-- local item_Id = event.item_Id
+		-- local inventory_Index = event.inventory_Index
+		local key_Code = event.strKey_Code
+		---------------------------------------------------------
+		local key = KeyboardKey.CastFrom(key_Code)
+		if self.quickSlotKey_ValidCheck_Table[key] == nil then
+		    --log("이미 nil 인 key 입니다.")
+			return
+		end
+		log(key_Code.."를 단축키에서 제거했습니다.")
+		self.quickSlotKey_ValidCheck_Table[key] = nil
+	end
+
+end

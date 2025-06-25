@@ -1,0 +1,117 @@
+@Component
+script CommonPlayerController extends Component
+
+	property Entity ui_PlantProgress = "41360a9c-c7b9-4937-91df-dff514fc4fb7"
+
+	property boolean isAttack = false
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.Space)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.LeftControl)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.W)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.A)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.S)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.D)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.Z)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.X)
+		_UserService.LocalPlayer.PlayerControllerComponent:RemoveActionKey(KeyboardKey.C)
+		
+		local controller = _UserService.LocalPlayer.PlayerControllerComponent
+		
+		--local attackConditionTable = {
+		--    controller:GetActionName(KeyboardKey.LeftAlt),
+		--    controller:GetActionName(KeyboardKey.LeftArrow),
+		--    controller:GetActionName(KeyboardKey.RightArrow),
+		--    controller:GetActionName(KeyboardKey.UpArrow),
+		--    controller:GetActionName(KeyboardKey.DownArrow),
+		--    controller:GetActionName(KeyboardKey.LeftControl),
+		--    "fall","stand","IDLE","Jump","stand1","stand2","fly"
+		--}
+		--for _,actionName in ipairs(attackConditionTable) do
+		--    controller:AddCondition(actionName,function()
+		--        return not self.isAttack
+		--    end)
+		--end
+		
+		if _UserService.LocalPlayer == self.Entity then -- 크리에이터 아이디 전용
+			self:CreateCreator()
+		end
+	end
+
+	@ExecSpace("Server")
+	method void CreateCreator()
+		if senderUserId ~= "20372100000898043" then
+			return
+		end
+		self.Entity:AddComponent(AdminComponent)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyDownEvent(KeyDownEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local key = event.key
+		---------------------------------------------------------
+		local player = _UserService.LocalPlayer
+		
+		if event.key == KeyboardKey.Space then
+			local localPlayer_Collision = _CollisionService:GetSimulator(player)
+			local overlapOtherComponent = localPlayer_Collision:Overlap(CollisionGroups.TriggerBox,_WorldRule:CreateShape(player))
+			if overlapOtherComponent ~= nil then
+			    self._T.SpacebarOverlapEntity = overlapOtherComponent
+				if overlapOtherComponent.Entity.SpaceBarTriggerComponent then
+				    overlapOtherComponent.Entity.SpaceBarTriggerComponent:EnterTrigger()		
+				end 
+			end
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyHoldEvent(KeyHoldEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local key = event.key
+		---------------------------------------------------------
+		--log(_UserService.LocalPlayer.Name)
+		local player = _UserService.LocalPlayer
+		if event.key == KeyboardKey.LeftControl then
+			player.WeaponComponent:NormalAttack()
+		elseif event.key == KeyboardKey.N then
+		    --player.StateComponent:ChangeState("CROUCH")
+		elseif event.key == KeyboardKey.Q then
+		    --player.PlayerAttack:AllKillAttack()
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Service", "InputService")
+	handler HandleKeyUpEvent(KeyUpEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: InputService
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local key = event.key
+		---------------------------------------------------------
+		if event.key == KeyboardKey.Space then
+			if self._T.SpacebarOverlapEntity ~= nil then
+				self._T.SpacebarOverlapEntity.Entity.SpaceBarTriggerComponent:LeaveTrigger()
+			end
+		    --self.ui_PlantProgress:SetEnable(false)
+		    --self.ui_PlantProgress.Gathering:SetUpdate(false)
+		end
+	end
+
+end

@@ -1,0 +1,233 @@
+@Component
+script DropItemComponent extends Component
+
+	@Sync
+	property integer itemIndex = 0
+
+	property number dropTweenTime = 0
+
+	property boolean isRotate = false
+
+	@Sync
+	property string itemName = ""
+
+	@Sync
+	property boolean isMoney = false
+
+	property number goalXpos = 0
+
+	method void InitItem(integer itemIndex)
+		self.itemIndex = itemIndex
+		
+		local spriteRCP = self.Entity.SpriteRendererComponent
+		local itemInfo = _GlobalData:GetItem(tostring(itemIndex))
+		local ruid = itemInfo.ruid
+		
+		spriteRCP.SpriteRUID = ruid
+		self.itemName = itemInfo.name
+		self.Entity.TriggerComponent.Enable = false
+		self.isRotate = true
+		
+		if itemInfo.type == "장비" then
+			self:imageReSize()
+		end
+	end
+
+	method void InitMoneyItem(integer itemIndex, integer amount)
+		self.itemIndex = itemIndex
+		
+		local spriteRCP = self.Entity.SpriteRendererComponent
+		local itemDataSet = _DataService:GetTable("MoneyItemDataTable")
+		local ruid = itemDataSet:GetRow(self.itemIndex):GetItem("IconRUID")
+		spriteRCP.SpriteRUID = ruid
+		self.itemName = itemDataSet:GetRow(self.itemIndex):GetItem("name")
+		
+		self.Entity.TriggerComponent.Enable = false
+		self.isRotate = false
+		self.isMoney = true
+		
+		self._T.moneyValue = amount
+	end
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		self.Entity.SoundTableComponent:PlayHit()
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnDestroy()
+		self:SoundGet()
+		if self._T.tweenPingpong ~= nil then
+			self._T.tweenPingpong:Destroy()
+		end
+		if self._T.tweenPingpong2 ~= nil then
+			self._T.tweenPingpong2:Destroy()
+		end
+	end
+
+	@ExecSpace("Client")
+	method void SoundGet()
+		self.Entity.SoundTableComponent:PlayDead()
+	end
+
+	@ExecSpace("Server")
+	method void SyncPosition()
+		-- 서버에서 포지션을 옮겼음에도 맵을 이동했다가 재진입을 하게 되면 그 이동 포지션이 반영이 안되는 문제가 있음.
+		-- 그래서 맵을 재진입할때 BeginPlay가 호출되는 부분에서 포지션의 동기화를 한다.
+		
+		self.Entity.MovementComponent:SetWorldPosition(self.Entity.TransformComponent.WorldPosition:ToVector2())
+	end
+
+	@ExecSpace("ServerOnly")
+	method void imageReSize()
+		self.Entity.TransformComponent.Scale.x *= 0.5
+		self.Entity.TransformComponent.Scale.y *= 0.5
+		self.Entity.TransformComponent.Scale.z *= 0.5
+		self.Entity.TriggerComponent.BoxSize = Vector2(0.520, 0.520)
+	end
+
+	@ExecSpace("Client")
+	method void SendMoneyGetMsgEvent(integer value)
+		local event = SystemMsgEvent()
+		event.msg = "+"..value.." 메소를 얻었습니다."
+		_UserService.LocalPlayer:SendEvent(event)
+	end
+
+	@ExecSpace("Client")
+	method void SendItemGetMsgEvent(integer itemId)
+		local event = SystemMsgEvent()
+		local itemInfo = _GlobalData:GetItem(tostring(itemId))
+		event.msg = itemInfo.name.."을(를) 획득했습니다."
+		_UserService.LocalPlayer:SendEvent(event)
+	end
+
+	@ExecSpace("Client")
+	method void ItemTweenActivate(number offsetX, boolean isRotate)
+		self.dropTweenTime = 1
+		if isRotate then
+			local tweenRotate = _TweenLogic:RotateTo(self.Entity, 360*3.5, self.dropTweenTime, EaseType.Linear)
+			tweenRotate.LoopCount = -1
+			self._T.tweenRotater = tweenRotate
+		end
+		
+		local height = 1.2
+		local tween = _TweenLogic:MoveOffset(self.Entity, Vector2(offsetX, height), self.dropTweenTime / 2, EaseType.QuadEaseOut)
+		
+		_TimerService:SetTimerOnce(function()
+			self:FinishTweenAnimation(self.Entity.TransformComponent.WorldPosition.y)
+		end,(self.dropTweenTime/2)-0.1)
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SetGoalXpos(number xPos)
+		self.goalXpos = math.clamp(xPos,self.Entity.CurrentMap.MapComponent.LeftBottom.x,self.Entity.CurrentMap.MapComponent.RightTop.x)
+		local offset = self.goalXpos - self.Entity.TransformComponent.WorldPosition.x
+		
+		self:ItemTweenActivate(offset,self.isRotate)
+	end
+
+	@ExecSpace("Server")
+	method void FinishTweenAnimation(number yPos)
+		self.Entity.MovementComponent:SetWorldPosition(Vector2(self.goalXpos,yPos))
+		self.Entity.RigidbodyComponent.Enable = true
+	end
+
+	@ExecSpace("Client")
+	method void StopRotate()
+		---@type Tweener
+		local tweenRotater = self._T.tweenRotater
+		if tweenRotater ~= nil then
+			tweenRotater:Destroy()
+			self.Entity.TransformComponent.ZRotation = 0.0
+		end
+		self._T.tweenOn = true
+		
+		--local tweenPingpong = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.1), 1, EaseType.QuadEaseOut)
+		----tweenPingpong.LoopType = TweenLoopType.PingPong
+		----tweenPingpong.LoopCount = -1
+		--tweenPingpong:SetOnEndCallback(function()
+		--    local tweenPingpong2 = _TweenLogic:MoveOffset(self.Entity, Vector2(0,-0.1), 1, EaseType.QuadEaseOut)
+		--    self._T.tweenPingpong2 = tweenPingpong2
+		--end)
+		--self._T.tweenPingpong = tweenPingpong	
+		
+		--local tween = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.1), 2, EaseType.Linear)
+		--tween:SetOnEndCallback(function()
+		--    local tweenPingpong = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.05), 3, EaseType.QuadEaseOut)
+		--    tweenPingpong.LoopType = TweenLoopType.PingPong
+		--    tweenPingpong.LoopCount = -1
+		--    self._T.tweenPingpong = tweenPingpong	
+		--end)
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		if self._T.tweenOn == nil then
+			return
+		end
+		
+		if self._T.tweenPingpong == nil and self._T.tweenPingpong2 == nil then
+			local tweenPingpong = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.05), 1, EaseType.QuadEaseOut)
+			tweenPingpong:SetOnEndCallback(function()
+				local tweenPingpong2 = _TweenLogic:MoveOffset(self.Entity, Vector2(0,-0.05), 1, EaseType.QuadEaseOut)
+				self._T.tweenPingpong2 = tweenPingpong2
+				tweenPingpong2:SetOnEndCallback(function()
+					self._T.tweenPingpong = nil
+					self._T.tweenPingpong2 = nil
+				end)
+			end)
+			self._T.tweenPingpong = tweenPingpong
+		end
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
+		-- Parameters
+		local TriggerBodyEntity = event.TriggerBodyEntity
+		--------------------------------------------------------
+		--아이템 엔티티와 충돌한 엔티티의 인벤토리를 받고, 인벤토리가 없으면 리턴
+		local inventory = TriggerBodyEntity.PlayerInventory
+		--log(TriggerBodyEntity.Name)
+		if inventory == nil then return end
+		-- 아이템 개수 변경 처리를 위해 ModifyItem() 함수 호출
+		if self.isMoney then
+			local meso = self._T.moneyValue
+			inventory:ModifyMoney(meso)
+			if TriggerBodyEntity.PlayerComponent then
+				self:SendMoneyGetMsgEvent(meso,TriggerBodyEntity.PlayerComponent.UserId)		
+			end
+		else
+			if inventory:ModifyItem(self.itemIndex, 1) == false then
+				return
+			end
+			self:SendItemGetMsgEvent(self.itemIndex,TriggerBodyEntity.PlayerComponent.UserId)
+		end
+		
+		-- 충돌한 아이템 엔티티는 파괴
+		self.Entity:Destroy()
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleFootholdEnterEvent(FootholdEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: RigidbodyComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local Foothold = event.Foothold
+		---------------------------------------------------------
+		
+		self.Entity.TriggerComponent.Enable = true
+		_TimerService:SetTimerOnce(function()
+		    self.Entity.RigidbodyComponent.Enable = false	
+		    self:StopRotate()
+		end,0.2)
+		
+	end
+
+end

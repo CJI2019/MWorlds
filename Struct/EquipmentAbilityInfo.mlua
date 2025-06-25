@@ -1,0 +1,22 @@
+@Struct
+script EquipmentAbilityInfo
+
+	property integer power = 0
+
+	property integer defense = 0
+
+	property number critical = 0
+
+	property number critical_Damage = 0
+
+	property number skill_Damage = 0
+
+	property integer hp = 0
+
+	property integer sp = 0
+
+	property integer level = 0
+
+	property number restoreSP = 0
+
+end

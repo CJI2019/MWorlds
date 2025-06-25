@@ -1,0 +1,189 @@
+@Component
+script PlayerEquipmentComponent extends Component
+
+	property table equipTable = {}
+
+	property StateComponentRef stateComponent = nil
+
+	property EntityRef skillZ = "e94a6ae4-fa60-459b-bcbe-a3759aee9d44"
+
+	property EntityRef skillX = "65ab571e-c6f3-4367-ab09-556b5581ebdb"
+
+	method void OnBeginPlay()
+		
+	end
+
+	method void EquipItem(EquipmentItemStruct item)
+		--<item.type> <--- 아이템을 얻을 때 생성되는 값
+		--무 속성 : 1 
+		--얼음 속성 : 2
+		--화염 속성 : 3
+		--번개 속성 : 4
+		--바람 속성 : 5
+		--어둠 속성 : 6
+		--빛 속성  : 7
+		local equipment = _GlobalData:GetEquipmentItem(item.itemId)
+		
+		self.equipTable[equipment.partType] = item
+		item.isEquiped = true
+		self.Entity.WeaponComponent:SetWeapon(item)
+		
+		local event = OnEquipItem()
+		event.inventoryIndex = item.inventoryIndex
+		event.itemId = item.itemId
+		event.willEquip = true
+		event.part = equipment.partType
+		self.Entity.PlayerInventory:SendEquipItemEvent(event)
+	end
+
+	method boolean IsEquiped(EquipmentItemStruct item)
+		local equipmentInfo = _GlobalData:GetEquipmentItem(item.itemId)
+		if equipmentInfo == nil then
+			return false
+		end
+		
+		---@type EquipmentItemStruct
+		local equipItem = self.equipTable[equipmentInfo.partType]
+		
+		if equipItem == nil then
+			return false
+		end
+		
+		if equipItem.inventoryIndex == item.inventoryIndex then
+			return true --같은 아이템을 장착하고 있음.
+		end
+		
+		return false
+	end
+
+	method void UnEquipItem(string part, boolean isChange)
+		-- 장착된 아이템을 해제하는 함수이다.
+		-- self.equipTable[part] 를 해제한다.
+		---@type EquipmentItemStruct
+		local equipPart = self.equipTable[part]
+		if equipPart == nil then
+			return
+		end
+		equipPart.isEquiped = false
+		local event = OnEquipItem()
+		event.inventoryIndex = equipPart.inventoryIndex
+		event.itemId = equipPart.itemId
+		event.willEquip = false
+		event.part = part
+		
+		-- 다른 아이템을 낀 상태에서 교체할경우 true < = > 교체가 필요없고 장착만 하는 경우 false
+		event.isChange = isChange 
+		self.Entity.PlayerInventory:SendEquipItemEvent(event)
+		self.Entity.WeaponComponent:SetWeapon(nil)
+		self.equipTable[part] = nil
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SyncEquipItem(EquipmentItemStruct item)
+		self:EquipItem(item)
+		self:ClientEquipItem(item,self.Entity.PlayerComponent.UserId)
+	end
+
+	@ExecSpace("Client")
+	method void ClientEquipItem(EquipmentItemStruct item)
+		self:EquipItem(item)
+		local skillZ_icon = _EntityService:GetEntityByPath(self.skillZ.Path.."/img_icon")
+		local skillZ_info = _GlobalData:GetSkillInfo(tostring(item.skillZ["id"]))
+		skillZ_icon.SpriteGUIRendererComponent.ImageRUID = skillZ_info.iconRUID
+		self.skillZ.Enable = true
+		
+		local skillX_icon = _EntityService:GetEntityByPath(self.skillX.Path.."/img_icon")
+		local skillX_info = _GlobalData:GetSkillInfo(tostring(item.skillX["id"]))
+		skillX_icon.SpriteGUIRendererComponent.ImageRUID = skillX_info.iconRUID
+		self.skillX.Enable = true
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SyncUnEquipItem(string part, boolean isChange)
+		self:UnEquipItem(part,isChange)
+		self:ClientUnEquipItem(part,isChange,self.Entity.PlayerComponent.UserId)
+	end
+
+	@ExecSpace("Client")
+	method void ClientUnEquipItem(string part, boolean isChange)
+		self:UnEquipItem(part,isChange)
+		self.skillZ.Enable = false
+		self.skillX.Enable = false
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleOnEquipItem(OnEquipItem event)
+		-- Parameters
+		local inventoryIndex = event.inventoryIndex
+		local itemId = event.itemId
+		local willEquip = event.willEquip
+		---------------------------------------------------------
+		-- 인벤토리 아이템의 정보를 가져와야한다.
+		
+		local costumeManager = self.Entity.CostumeManagerComponent
+		if costumeManager == nil then
+			log("costumeManager is nil")
+			return
+		end
+		
+		costumeManager.CustomOneHandedWeaponEquip = ""
+		costumeManager.CustomTwoHandedWeaponEquip = ""
+		if willEquip == false then
+			return
+		end
+		
+		local equipmentInfo = _GlobalData:GetEquipmentItem(itemId)
+		if equipmentInfo == nil then
+			log("equipmentInfo is nil")
+			return
+		end
+		
+		if equipmentInfo.isTwoHand then
+			costumeManager.CustomTwoHandedWeaponEquip = equipmentInfo.ruid
+		else
+			costumeManager.CustomOneHandedWeaponEquip = equipmentInfo.ruid
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleOnInventorySlotChange(OnInventorySlotChange event)
+		-- Parameters
+		local slotA_Inventory_Index = event.slotA_Inventory_Index
+		local slotB_Inventory_Index = event.slotB_Inventory_Index
+		---------------------------------------------------------
+		
+		---@type EquipmentItemStruct
+		local partA_Item_Struct = nil
+		---@type EquipmentItemStruct
+		local partB_Item_Struct = nil
+		
+		for part,item in pairs(self.equipTable) do
+			---@type EquipmentItemStruct
+			local equipItem = item
+			if equipItem.inventoryIndex == slotA_Inventory_Index then
+				partA_Item_Struct = equipItem
+				break
+			end 
+		end
+		
+		for part,item in pairs(self.equipTable) do
+			---@type EquipmentItemStruct
+			local equipItem = item
+			if equipItem.inventoryIndex == slotB_Inventory_Index then
+				partB_Item_Struct = equipItem
+				break
+			end 
+		end
+		
+		if partA_Item_Struct ~= nil then
+			partA_Item_Struct.inventoryIndex = slotB_Inventory_Index
+		end
+		
+		if partB_Item_Struct ~= nil then
+			partB_Item_Struct.inventoryIndex = slotA_Inventory_Index
+		end
+	end
+
+end

@@ -1,0 +1,274 @@
+@Component
+script Monster extends Component
+
+	property number Hp = 0
+
+	property boolean RespawnOn = false
+
+	@Sync
+	@HideFromInspector
+	property boolean IsDead = false
+
+	property number RespawnDelay = 5
+
+	property any DeadHandler = nil
+
+	property Vector2 SpawnLocation = Vector2(0,0)
+
+	property integer monster_table_num = 0
+
+	property any CollisionGroup = nil
+
+	property boolean isKnockback = false
+
+	property any monster_Info = nil
+
+	method void OnBeginPlay()
+		local monster_Info = _GlobalData:GetMonsterBeginPlay(tostring(self.monster_table_num))
+		self.monster_Info = monster_Info
+		
+		if self:IsServer() == false then
+			return
+		end
+		
+		self.Hp = self.monster_Info.maxHp
+		
+		self.SpawnLocation = Vector2(self.Entity.TransformComponent.WorldPosition.x,self.Entity.TransformComponent.WorldPosition.y)
+		
+		local state = self.Entity.StateComponent
+		if nil ~= state then
+		    if not (state:AddState("MOVE", MoveState) and 
+				state:AddState("HIT2", HitState) and 
+				state:AddState("DEAD2", DeadState))then
+				log("state add fail")
+			end
+			
+		    state:AddCondition("HIT2","MOVE")
+		    --state:AddState("HIT_PUSH", KnockbackState)
+		end
+		
+		self._T.Knockback = -1
+		self._T.HitDir = 0
+		self._T.curfoothold = nil
+		self.CollisionGroup = CollisionGroups.Monster
+		
+		self._T.MonsterKillEvent = OnMonsterKill()
+		self._T.MonsterKillEvent.mobId = tostring(self.monster_table_num)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void Dead()
+		local event = OnMonsterDead()
+		event.monster = self.Entity
+		self.Entity:SendEvent(event) -- 몬스터 매니저에게 알릴 수 있도록함.
+		
+		self.IsDead = true
+		local stateComponent = self.Entity.StateComponent
+		if stateComponent then
+		    stateComponent:ChangeState("DEAD2")
+		    --self.Entity.MonsterDeadAnimationComponent:Activate()
+		    --self.Entity.AIFollowAndWanderComponent:ChangeDummyRoot()
+		    --log("monster change state to DEAD")
+		end
+		
+		self.Entity.SoundTableComponent:PlayDead()
+		
+		local monsterInfo = _GlobalData:GetMonster(tostring(self.monster_table_num))
+		
+		local dropTable = {}
+		for key, value in pairs(monsterInfo.items) do
+		    local probability = tonumber(value)  -- 확률을 숫자로 변환
+		    local roll = math.random() * 100  -- 0~100 사이의 랜덤 값 생성    
+		    if roll <= probability then
+		        table.insert(dropTable, tonumber(key))  -- 확률이 범위 내에 있으면 아이템 추가
+		    end
+		end
+		
+		local pos = self.Entity.TransformComponent.WorldPosition:Clone()
+		pos.y += 1
+		local offset = 0.12
+		pos.x -= (#dropTable+1) * offset -- 메소 포함 개수
+		for i,itemId in ipairs(dropTable) do
+			pos.x += offset
+			-- Model_Item의 Entry ID를 복사하여 "Entry ID" 부분에 붙여 넣기
+			local itemEntity = _SpawnService:SpawnByModelId("model://maplestoryitem$0039bd125ebb4666a5e6fb27842cfdc7",
+			     "Item",self.Entity.TransformComponent.WorldPosition ,self.Entity.Parent ) -- self.Entity.Parent
+			itemEntity.DropItemComponent:InitItem(itemId)
+			itemEntity.DropItemComponent:SetGoalXpos(pos.x)
+		end
+		
+		pos.x += offset
+		local moneyEntity = _SpawnService:SpawnByModelId("model://maplestoryitem$0039bd125ebb4666a5e6fb27842cfdc7",
+		     "Item", self.Entity.TransformComponent.WorldPosition, self.Entity.Parent)
+		
+		---@type MonsterInfo
+		local monster_Info = self.monster_Info
+		local mesoAmount = _GlobalData:GetRandomMeso(monster_Info.level)
+		local spriteType = _GlobalData:GetMesoSpriteType(mesoAmount,1)
+		moneyEntity.DropItemComponent:InitMoneyItem(spriteType,mesoAmount)
+		moneyEntity.DropItemComponent:SetGoalXpos(pos.x)
+		
+	end
+
+	@ExecSpace("Server")
+	method void Respawn()
+		self.Entity.MonsterHPBarComponent:Init()
+		self.Entity.MonsterNameTagComponent:SetActive(false)
+		
+		self.IsDead = false
+		self.Entity.MovementComponent:SetWorldPosition(self.SpawnLocation)
+		
+		self.Entity:SetVisible(true,true,true)
+		self.Entity:SetEnable(true)
+		self.Entity.HitComponent.Enable = true
+		self.Entity.HitComponent.CollisionGroup = self.CollisionGroup
+		
+		
+		---@type MonsterInfo
+		local monster_Info = self.monster_Info
+		self.Hp = monster_Info.maxHp
+		local stateComponent = self.Entity.StateComponent
+		if stateComponent then
+		    stateComponent:ChangeState("IDLE")
+		end
+		
+	end
+
+	@ExecSpace("ServerOnly")
+	method void OnUpdate(number delta)
+		--if not _WorldRule:IsUpdate(self.Entity) then
+		--    return
+		--end
+		--log(self.Entity.TransformComponent.WorldPosition)
+		--log(self.Entity.Name)
+		self:KnockbackUpdate(delta)
+	end
+
+	@ExecSpace("Server")
+	method void SelfDelete()
+		self.Entity:Destroy()
+	end
+
+	method void KnockbackUpdate(number delta)
+		-- 항상 몬스터의 foothold를 추적하여 변수로 저장함.
+		-- foothold의 GetYByX로 그 x 좌표의 y값을 얻어옴.
+		if self._T.Knockback >= 0 then
+			if self._T.Knockback > 0.2 then -- hit 이미지 표현 강조
+			    local movement = self.Entity.MovementComponent
+			    if movement ~= nil then
+			        local dir = Vector2(1.5 * delta * self._T.HitDir,0)
+			        local next_x = self.Entity.TransformComponent.WorldPosition.x + dir.x
+			        local next_y = self.Entity.TransformComponent.WorldPosition.y
+			        --log(self._T.curfoothold:GetYByX(next_x))
+			        --log(self._T.curfoothold.Id)
+			        local next_foothold = self.Entity.CurrentMap.FootholdComponent:GetNearestFootholdByPoint(Vector2(next_x,next_y),0.3)
+			        if next_foothold ~= nil then
+			            movement:SetWorldPosition(Vector2(next_x,next_foothold:GetYByX(next_x)))
+						if self.Entity.TransformComponent.WorldPosition.y <= -30 then
+							if self._T.HitDir == 1 then
+						    	self.Entity.MovementComponent:SetWorldPosition(self._T.curfoothold.EndPoint)
+							else
+						    	self.Entity.MovementComponent:SetWorldPosition(self._T.curfoothold.StartPoint)
+							end
+						end
+			        end
+			    end
+			end
+		    self._T.Knockback -= delta
+		else
+			self.isKnockback = false
+		end
+	end
+
+	method MonsterInfo GetMonsterInfo()
+		return self.monster_Info
+	end
+
+	@ExecSpace("Client")
+	method void ClientHitEvent()
+		---@type MonsterInfo
+		local monster_Info = self.monster_Info
+		self.Entity.MonsterNameTagComponent:SetActive(true)
+		self.Entity.MonsterHPBarComponent:SyncHP(self.Hp / monster_Info.maxHp)
+	end
+
+	@ExecSpace("Client")
+	method void SyncHP(number hp)
+		self.Hp = hp
+	end
+
+	method integer GetLevel()
+		---@type MonsterInfo
+		local monster_Info = self.monster_Info
+		return monster_Info.level
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleFootholdEnterEvent(FootholdEnterEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: RigidbodyComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local Foothold = event.Foothold
+		---------------------------------------------------------
+		--log(event.Foothold.Id)
+		self._T.curfoothold = event.Foothold
+	end
+
+	@ExecSpace("ServerOnly")
+	@EventSender("Self")
+	handler HandleMyAttackEvent(MyAttackEvent event)
+		-- Parameters
+		local attacker = event.attacker
+		local skillId = event.skillId
+		
+		-- Component of attacker
+		local attackerAbility = attacker.AbilityComponent
+		---------------------------------------------------------
+		local skill_Info = _GlobalData:GetSkillInfo(skillId)
+		
+		local damages = {}
+		local criticals = {}
+		local totalDamage = 0
+		
+		totalDamage = attackerAbility:DamageCalculator(skill_Info,damages,criticals)
+		
+		local originalHp = self.Hp
+		self.Hp = self.Hp - totalDamage
+		self:SyncHP(self.Hp,attacker.PlayerComponent.UserId)
+		
+		_DamageSkinService:Play(self.Entity, attacker.DamageSkinSettingComponent.DamageSkinId.DataId, skill_Info.damageSkinDelay, 
+			damages,	DamageSkinTweenType.Default, criticals)
+		_EffectService:PlayEffect(skill_Info.hitRUID, self.Entity, self.Entity.TransformComponent.Position, 0, Vector3.one, false, {PlayRate = 1 })
+		
+		---@type MonsterInfo
+		local monster_Info = self.monster_Info
+		self:ClientHitEvent(attacker.PlayerComponent.UserId)
+		self.Entity.SoundTableComponent:PlayHit()
+		
+		if self.Hp > 0 or originalHp <= 0 then
+		    self._T.Knockback = 0.4
+			local stateComponent = self.Entity.StateComponent
+		    if stateComponent then
+				self.isKnockback = true
+		        stateComponent:ChangeState("HIT2")
+		    end
+		
+			self._T.HitDir = -1
+			if attacker.TransformComponent.WorldPosition.x < self.Entity.TransformComponent.WorldPosition.x then
+				self._T.HitDir = 1 -- 어느 방향으로 타격했는가.
+			end
+		
+		    return	
+		end
+		
+		self.Entity.HitComponent.CollisionGroup = CollisionGroups.Nothing
+		self:Dead()
+		attacker:SendEvent(self._T.MonsterKillEvent)
+	end
+
+end

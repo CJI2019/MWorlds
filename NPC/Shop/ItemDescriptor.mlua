@@ -1,0 +1,16 @@
+@Component
+script ItemDescriptor extends Component
+
+	property any itemInfo = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnInitialize()
+		---@type ItemInfo
+		self.itemInfo = ItemInfo()
+	end
+
+	method void SetDescriptor(ItemInfo iteminfo)
+		self.itemInfo = iteminfo
+	end
+
+end

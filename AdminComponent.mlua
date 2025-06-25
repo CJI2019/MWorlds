@@ -1,0 +1,64 @@
+@Component
+script AdminComponent extends Component
+
+	property string adminId = ""
+
+	method void OnBeginPlay()
+		if self.Entity.PlayerComponent.UserId ~= "20372100000898043" then
+			self.Enable = false
+			return
+		end
+		
+		log("Admin 접속을 확인")
+	end
+
+	@ExecSpace("Server")
+	method void AddMoney(integer money)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId or senderUserId ~= "20372100000898043" then
+			return
+		end
+		
+		self.Entity.PlayerInventory:ModifyMoney(money)
+	end
+
+	@ExecSpace("Server")
+	method void SetMoney(integer money)
+		if senderUserId ~= self.Entity.PlayerComponent.UserId or senderUserId ~= "20372100000898043" then
+			return
+		end
+		self.Entity.PlayerInventory:ModifyMoney(-self.Entity.PlayerInventory:GetMoney())
+		self.Entity.PlayerInventory:ModifyMoney(money)
+	end
+
+	@EventSender("Entity", "7c0f8bb5-cf19-437c-9bb8-97e81f836dce")
+	handler HandleChatEvent(ChatEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ChatComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		local Message = event.Message
+		-- local SenderName = event.SenderName
+		local UserId = event.UserId
+		---------------------------------------------------------
+		if UserId ~= "20372100000898043" then
+			log("not admin")
+			return
+		end
+		
+		if string.sub(Message,1,1) ~= "/" then
+			return
+		end
+		
+		local strTable = _UtilLogic:Split(Message," ")
+		if strTable[1] == "/money" then
+			local money = tonumber(strTable[2])
+			self:AddMoney(money)
+		elseif strTable[1] == "/setmoney" then
+			local money = tonumber(strTable[2])
+			self:SetMoney(money)
+		end
+	end
+
+end

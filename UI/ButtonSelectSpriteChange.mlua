@@ -1,0 +1,36 @@
+@Component
+script ButtonSelectSpriteChange extends Component
+
+	property string selectSpriteRuid = ""
+
+	property any defaultSpriteRuid = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.defaultSpriteRuid = self.Entity.SpriteGUIRendererComponent.ImageRUID
+	end
+
+	method void SetDefault()
+		self.Entity.SpriteGUIRendererComponent.ImageRUID = self.defaultSpriteRuid 
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("Self")
+	handler HandleButtonClickEvent(ButtonClickEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ButtonComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		 local Entity = event.Entity
+		---------------------------------------------------------
+		if _UIButtonClickManager.clickEntity ~= nil then
+			_UIButtonClickManager.clickEntity.ButtonSelectSpriteChange:SetDefault()
+		end
+		
+		_UIButtonClickManager.clickEntity = Entity
+		self.Entity.SpriteGUIRendererComponent.ImageRUID = self.selectSpriteRuid
+	end
+
+end

@@ -1,0 +1,4 @@
+@Event
+script OnMonsterHitEvent extends EventType
+
+end

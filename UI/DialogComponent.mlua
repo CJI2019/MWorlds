@@ -1,0 +1,360 @@
+@Component
+script DialogComponent extends Component
+
+	property EntityRef closeButton = "50f9a027-591a-4160-966c-e67eecf195a4"
+
+	property EntityRef image = "5c9dbe09-7f74-4b5f-86a4-76d209d23ec5"
+
+	property EntityRef name = "1bd5c191-ab94-45c1-ad18-305576d2e1db"
+
+	property EntityRef text = "decf740a-5be7-442d-9e34-0d69cde57b1f"
+
+	property any questInfo = nil
+
+	property integer cur_ScriptNumber = 0
+
+	property EntityRef nextButton = "32bb831d-822a-41ae-882d-e04e65b3c015"
+
+	property EntityRef prevButton = "c94a1216-bbb0-4fba-8795-b4c6d648e540"
+
+	property number fontSize = 32
+
+	property number maxTextRectSize = 0
+
+	property EntityRef textFrame = "3a2cfbba-7314-4223-a28f-4fe538712820"
+
+	property EntityRef acceptButton = "b145d263-6c8c-4463-bfbd-3e9550d64ebd"
+
+	property EntityRef interactionNpc = nil
+
+	property EntityRef scroll_Quest = "af255a78-43d2-4744-bc9c-7322772e2208"
+
+	property EntityRef questButton_Origin = "2e1a7704-9c59-4837-9267-617aaf4892de"
+
+	property EntityRef completeButton = "eefc52c9-44af-47fa-9a91-a0b64145a294"
+
+	property EntityRef img_text = "ded80e8f-90e3-4d42-8ec8-67d95bc2ce87"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.maxTextRectSize = 1150 -- 최대치는 1200이나 글자 크기에 의한 오차를 줄이기 위해 1150으로 설정
+		self._T.oldTotalTextRectSize = 0.0
+		self._T.spawnedTextEntitys = {}
+		self._T.isLastPage = false
+		local closeFunction = function()
+			self:CloseUI()
+		end
+		self.closeButton:ConnectEvent(ButtonClickEvent,closeFunction)
+		
+		local nextPaging = function()
+			self:NextPage()
+		end
+		self.nextButton:ConnectEvent(ButtonClickEvent,nextPaging)
+		
+		local pervPaging = function()
+			self:PervPage()
+		end
+		self.prevButton:ConnectEvent(ButtonClickEvent,pervPaging)
+		
+		local acceptLogic = function()
+		    _UserService.LocalPlayer.PlayerQuestComponent:QuestAccept(self.questInfo.id)
+			if self._T.isLastPage then
+				self:CloseUI()
+			else
+				self:NextPage()
+			end
+		end
+		self.acceptButton:ConnectEvent(ButtonClickEvent,acceptLogic)
+		
+		local completeQuest = function()
+			_UserService.LocalPlayer.PlayerQuestComponent:QuestComplete(self.questInfo.id)
+			
+			if self._T.isLastPage then
+				self:CloseUI()
+			else
+				self:NextPage()
+			end
+		end
+		self.completeButton:ConnectEvent(ButtonClickEvent,completeQuest)
+		
+		-- self:FontWidthCache(32)
+		_CustomText:FontWidthCache(32)
+		
+		self._T.textCount = 1
+		self._T.textEntityTable = {self.text}
+		for i = 2 ,255 do
+			table.insert(self._T.textEntityTable,_SpawnService:SpawnByEntity(self.text,"text",Vector3.zero,self.textFrame))
+		end
+		
+	end
+
+	method void CloseUI()
+		self.interactionNpc = nil
+		self.acceptButton.Enable = false
+		self.textFrame.Enable = false
+		self.prevButton.Enable = false
+		self.nextButton.Enable = false
+		self.scroll_Quest.Enable = false
+		self.completeButton.Enable = false
+		
+		self.Entity:SetEnable(false)
+	end
+
+	method void MultipleQuestUISetting()
+		self.acceptButton.Enable = false
+		self.textFrame.Enable = false
+		self.prevButton.Enable = false
+		self.nextButton.Enable = false
+	end
+
+	method void DialogUISetting()
+		-- 명령어가 없는 기본 대화 세팅
+		self.nextButton.Enable = true
+		self.prevButton.Enable = true
+		self.acceptButton.Enable = false
+		self.completeButton.Enable = false
+		self._T.isLastPage = false
+	end
+
+	method void SelectQuest(string questId)
+		self.acceptButton.Enable = false
+		self.textFrame.Enable = false
+		self.prevButton.Enable = false
+		self.nextButton.Enable = false
+		self.scroll_Quest.Enable = false
+		
+		self:SetDialogData(nil,questId)
+	end
+
+	method void OpenMultipleQuestUI(EntityRef npc, table availableQuestDict)
+		self:MultipleQuestUISetting()
+		self.interactionNpc = npc
+		self.name.TextComponent.Text = npc.NameTagComponent.Name
+		self.image.SpriteGUIRendererComponent.ImageRUID = npc.StateAnimationComponent.ActionSheet["stand"]
+		
+		local questCount = #availableQuestDict["questTable"]
+		local questIdTable = availableQuestDict["questTable"]
+		
+		self.scroll_Quest.Enable = true
+		for i = #self.scroll_Quest.Children + 1 , questCount do -- 1개의 객체는 이미 존재함.
+			_SpawnService:SpawnByEntity(self.questButton_Origin,"btn_quest"..i,Vector3.zero,self.scroll_Quest)
+		end
+		
+		for i,questButton in ipairs(self.scroll_Quest.Children) do
+			local questId = questIdTable[i]
+			if i <= questCount then
+				questButton.QuestNameButtonComponent:SetQuest(questId)
+				questButton.Enable = true
+			else
+				questButton.Enable = false
+			end
+		end
+		
+	end
+
+	method void SetDialogData(EntityRef npc, string questId)
+		if npc ~= nil then
+			self.interactionNpc = npc
+		end
+		
+		local questNpc = self.interactionNpc.QuestNPCComponent
+		
+		self.questInfo = questNpc.myQuestInfos[questId]
+		self:DialogUISetting()
+		
+		-- 처음 스크립트 대화
+		self.cur_ScriptNumber = self.questInfo:GetEntryPoint(questNpc:GetQuestIdProgress(questId),self.interactionNpc.Path)
+		self._T.curScript_firstPage = self.cur_ScriptNumber
+		self:SetPage(self.cur_ScriptNumber)
+		
+		self.textFrame.Enable = true
+		self.prevButton.Enable = false
+	end
+
+	method void SetPage(integer page)
+		self:DialogUISetting()
+		
+		for i = 1, self._T.textCount do
+		    self._T.textEntityTable[i].UITransformComponent.RectSize.x = 1
+		    self._T.textEntityTable[i].TextComponent.Text = ""
+			self._T.textEntityTable[i].TextComponent.FontColor = Color(0,0,0,1.0)
+		end
+		self._T.textCount = 0
+		
+		for i = 1 , #self._T.spawnedTextEntitys do
+		    self._T.spawnedTextEntitys[i]:Destroy()
+		end
+		table.clear(self._T.spawnedTextEntitys)
+		
+		self.name.TextComponent.Text = self.questInfo.scripts[page]:GetItem("name")
+		self.image.SpriteGUIRendererComponent.ImageRUID = self.questInfo.scripts[page]:GetItem("npcimage")
+		
+		--버튼 활성화에 관계없이 명령어에 따라서 이 함수에서 Enable 함.
+		self:WrapTextForUI(page)
+	end
+
+	method void NextPage()
+		if #self.questInfo.scripts == self.cur_ScriptNumber then
+			return
+		end
+		
+		self.cur_ScriptNumber += 1
+		self:SetPage(self.cur_ScriptNumber)
+	end
+
+	method void PervPage()
+		if 1 == self.cur_ScriptNumber then
+			return
+		end
+		
+		self.cur_ScriptNumber -= 1
+		self:SetPage(self.cur_ScriptNumber)
+		
+		if self.cur_ScriptNumber == self._T.curScript_firstPage then
+			self.prevButton.Enable = false
+		end
+	end
+
+	method void CommandProcess(string cmd)
+		if cmd == 'a' then
+			self.acceptButton:SetEnable(true)
+			self.nextButton:SetEnable(false)
+		elseif cmd == 'f' then
+			self._T.isLastPage = true
+			self.nextButton:SetEnable(false)
+		elseif cmd == 'g' then
+			self.completeButton:SetEnable(true)
+			self.nextButton:SetEnable(false)
+		end
+	end
+
+	method void WrapTextForUI(integer page)
+		local cur_TextPage = self.questInfo.scripts[page]:GetItem("text")
+		
+		local utf8_TextTable = _UtillCustom:Split_utf8(cur_TextPage)
+		local textRectSizeX = 0.0
+		local fixedtext = ""
+		local cur_textEntity = self._T.textEntityTable[1]
+		self._T.textCount = 1
+		local cmdCountStack = 0
+		local colorCmd = false
+		
+		local TextBlockInit = function ()
+			cur_textEntity.UITransformComponent.RectSize.x = textRectSizeX
+			cur_textEntity.TextComponent.Text = fixedtext
+		
+			textRectSizeX = 0.0
+			fixedtext = ""
+		end
+		local SpawnNewText = function (dx,dy)
+			self._T.textCount += 1
+			local newTextEntity = self._T.textEntityTable[self._T.textCount]
+			newTextEntity.UITransformComponent.anchoredPosition.x = dx
+			newTextEntity.UITransformComponent.anchoredPosition.y = cur_textEntity.UITransformComponent.anchoredPosition.y + dy
+			if colorCmd then
+				newTextEntity.TextComponent.FontColor = cur_textEntity.TextComponent.FontColor
+			end
+			cur_textEntity = newTextEntity
+		end
+		
+		local xOffSet = 0
+		local yOffSet = 0
+		local imageCount = 0
+		local imageRectSize = self.img_text.UITransformComponent.RectSize
+		
+		local idx = 0
+		while true
+		do
+			idx += 1
+			local char = utf8_TextTable[idx]
+			if char == nil then
+				break
+			end
+		
+			if _CustomText:GetFontSizeWidth(self.fontSize,char) == nil then
+				log("nil is "..char)
+				continue
+			end
+			-- \(백슬래시) 명령어 처리
+			if char == '\\' or cmdCountStack == 1 then
+				cmdCountStack += 1
+				if cmdCountStack == 2 then
+					cmdCountStack = 0
+				end
+				self:CommandProcess(char)
+				if char == 'i' then
+		            TextBlockInit()
+		            local imageEntity = _SpawnService:SpawnByEntity(self.img_text,"img_text",Vector3.zero,self.textFrame)
+		            --imageEntity.Enable = true
+		            --imageEntity.Visible = true
+		            table.insert(self._T.spawnedTextEntitys,imageEntity)
+		            imageCount += 1
+					local dx = cur_textEntity.UITransformComponent.anchoredPosition.x + cur_textEntity.UITransformComponent.RectSize.x
+					local dy = cur_textEntity.UITransformComponent.anchoredPosition.y
+					local isNewLine = false
+		            if xOffSet > self.maxTextRectSize then
+						dx = 0
+						dy = cur_textEntity.UITransformComponent.anchoredPosition.y - cur_textEntity.UITransformComponent.RectSize.y - yOffSet
+						xOffSet = 0
+						isNewLine = true		
+					end
+					
+		            imageEntity.UITransformComponent.anchoredPosition.x = dx 
+		            imageEntity.UITransformComponent.anchoredPosition.y = dy
+					
+		            if isNewLine then
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) -- 이미지 포지션 + 이미지 사이즈
+					else
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,0)
+					end
+		
+					-- 개행이 일어나지 않아 남은 rect사이즈를 체크해야한다.
+		            xOffSet = cur_textEntity.UITransformComponent.anchoredPosition.x
+		            yOffSet = 20
+					
+					if utf8_TextTable[idx+1] == '<' then
+						idx = _CustomText:SetImageText(utf8_TextTable,imageEntity,idx)
+					end
+				elseif char == 'n' then
+					TextBlockInit()
+					SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
+					xOffSet = 0
+					yOffSet = 0
+				elseif char == 'c' then
+					if colorCmd then
+						colorCmd = false
+						TextBlockInit()
+						SpawnNewText(cur_textEntity.UITransformComponent.anchoredPosition.x + cur_textEntity.UITransformComponent.RectSize.x,0)
+					else
+						idx = _CustomText:SetColorText(utf8_TextTable,cur_textEntity,idx)
+						colorCmd = true
+					end
+				end
+		
+				continue
+			end
+			
+			if textRectSizeX + xOffSet > self.maxTextRectSize then
+				-- 텍스트 박스 가로 크기를 넘어서려고 하면 다음 단으로 넘겨야함.
+				TextBlockInit()
+				SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
+				xOffSet = 0
+				yOffSet = 0
+			end
+			
+			if textRectSizeX == 0.0 then
+				if char == " " then
+					continue
+				end
+			end
+			
+			textRectSizeX += _CustomText:GetFontSizeWidth(self.fontSize,char)
+			fixedtext = fixedtext..char
+		end
+		
+		self._T.oldTotalTextRectSize = 0
+		cur_textEntity.UITransformComponent.RectSize.x = textRectSizeX
+		cur_textEntity.TextComponent.Text = fixedtext
+	end
+
+end

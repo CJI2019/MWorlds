@@ -1,0 +1,69 @@
+@Component
+script UIBarAction extends Component
+
+	property EntityRef bar_Center = "b9e88ec2-f330-48f3-8729-c29650dcb223"
+
+	property EntityRef bar_Right = "fd1355a4-a6d9-489d-bcd1-60d2238d81ea"
+
+	property EntityRef bar_Left = "ec9d2ff6-91ac-480b-882b-0dc98c4aa74d"
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self._T.centerSize = self.bar_Center.UITransformComponent.RectSize.x
+		self._T.bar_Left = self.bar_Left.UITransformComponent.RectSize.x
+		self._T.bar_Right = self.bar_Right.UITransformComponent.RectSize.x
+		self._T.totalSize = self._T.centerSize + self._T.bar_Left + self._T.bar_Right
+		self:Init()
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		self._T.elapsed_Time += delta
+		local progress = self._T.elapsed_Time / 1.0
+		
+		self.bar_Left.UITransformComponent.RectSize.x = self._T.bar_Left * math.clamp(math.min(self:Transform_Left(progress), 1.0),0.0,1.0) 
+		self.bar_Center.UITransformComponent.RectSize.x = self._T.centerSize * math.clamp(math.min(self:Transform_Center(progress), 1.0),0.0,1.0)
+		self.bar_Right.UITransformComponent.RectSize.x = self._T.bar_Right * math.clamp(math.min(self:Transform_Right(progress), 1.0),0.0,1.0)
+		
+		if progress >= 1 then
+			local event = OnBarActionComplete()
+			self.Entity:SendEvent(event)
+		    self.Enable = false
+		    self:Init()
+		end
+			
+	end
+
+	method number Transform_Left(number x)
+		--return x / (30 / 3660)
+		return x / (self._T.bar_Left / self._T.totalSize)
+	end
+
+	method number Transform_Center(number x)
+		--return (x - (30 / 3660)) / (3630 / 3660)
+		return (x - (self._T.bar_Left / self._T.totalSize)) / ((self._T.totalSize - self._T.bar_Left ) / self._T.totalSize)
+	end
+
+	method number Transform_Right(number x)
+		--return (x - (3630 / 3660)) / (30 / 3660)
+		return (x - ((self._T.totalSize - self._T.bar_Right ) / self._T.totalSize)) / (self._T.bar_Right / self._T.totalSize)
+	end
+
+	method void Init()
+		self.bar_Center.UITransformComponent.RectSize.x = 0 
+		self.bar_Right.UITransformComponent.RectSize.x = 0 
+		self.bar_Left.UITransformComponent.RectSize.x = 0
+		self._T.elapsed_Time = 0
+	end
+
+	method void StartAction()
+		self:Init()
+		self.Enable = true
+	end
+
+	method void DeActivate()
+		self:Init()
+		self.Enable = false
+	end
+
+end

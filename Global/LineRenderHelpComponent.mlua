@@ -1,0 +1,16 @@
+@Component
+script LineRenderHelpComponent extends Component
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		if self.Enable then
+			self.Entity:ConnectEvent(TouchEvent,self.TouchEvent)	
+		end
+		
+	end
+
+	method void TouchEvent()
+		_TouchAreaUtill:CreateLineRendererToTouchReceiveComponent(self.Entity)
+	end
+
+end

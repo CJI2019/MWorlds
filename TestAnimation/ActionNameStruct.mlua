@@ -1,0 +1,8 @@
+@Struct
+script ActionNameStruct
+
+	property string CoreActionName = ""
+
+	property string PartsActionName = ""
+
+end

@@ -1,0 +1,33 @@
+@Logic
+script LevelManager extends Logic
+
+	property table levelTable = {}
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		local levelDataSet = _DataService:GetTable("LevelTable")
+		for level = 1, levelDataSet:GetRowCount() do
+			local levelData = levelDataSet:GetRow(level)	
+			local exp 		= levelData:GetItem("exp")
+			
+			-- 0 ~ exp "까지" level의 exp 요구치
+			self.levelTable[level] = tonumber(exp)
+		end
+		--wait(1)
+		self._T.IsAvailable = true
+		--log("levelManager")
+	end
+
+	method integer Get_LevelUp_Requirement(integer level)
+		return self.levelTable[level]
+	end
+
+	method integer BeiginPlayIsAvailableAndGetLevelExp(integer level)
+		while self._T.IsAvailable == nil do
+			wait(0.1)
+		end
+		
+		return self.levelTable[level]
+	end
+
+end

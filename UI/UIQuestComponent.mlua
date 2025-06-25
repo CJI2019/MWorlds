@@ -1,0 +1,346 @@
+@Component
+script UIQuestComponent extends Component
+
+	property EntityRef btn_quest_main = nil
+
+	property EntityRef btn_quest_normal = nil
+
+	property EntityRef btn_quest_difficult = nil
+
+	property EntityRef btn_quest_daily = nil
+
+	property EntityRef btn_title = nil
+
+	property EntityRef img_npc = nil
+
+	property EntityRef txt_questTitle = nil
+
+	property EntityRef btn_alert = nil
+
+	property EntityRef btn_close = nil
+
+	property EntityRef localPlayer = nil
+
+	property string cur_Click_Group = ""
+
+	property EntityRef txt_script = nil
+
+	property EntityRef img_text = nil
+
+	property number maxTextRectSize = 0
+
+	property integer fontSize = 0
+
+	property EntityRef frame_imgtxt = nil
+
+	property number fontHeight = 0
+
+	property EntityRef txt_summation = nil
+
+	property EntityRef frame_helper = nil
+
+	property string cur_Click_QuestId = ""
+
+	property EntityRef txt_emptyQuest = nil
+
+	property EntityRef frame_scroll_detail = nil
+
+	property EntityRef frame_quest = nil
+
+	property EntityRef notice_selectQuest = nil
+
+	property boolean entityLoadComplete = false
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.btn_quest_main = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questType/Scroll_Layout/btn_quest_main")
+		self.btn_quest_normal = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questType/Scroll_Layout/btn_quest_normal")
+		self.btn_quest_difficult = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questType/Scroll_Layout/btn_quest_difficult")
+		self.btn_quest_daily = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questType/Scroll_Layout/btn_quest_daily")
+		self:EventConnectQuestType()
+		
+		self.txt_emptyQuest = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questTitles/txt_emptyQuest")
+		-- text를 가진 버튼
+		self.btn_title = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questTitles/Scroll_Layout/btn_title")
+		self.btn_title.Enable = false
+		
+		self.img_npc = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_quest/img_npc")
+		self.txt_questTitle = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_quest/frame_txt/txt_questTitle")
+		self.btn_alert = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_quest/btn_alert")
+		self.frame_helper = _EntityService:GetEntityByPath("/ui/PopupGroup/frame_helper")
+		local alertFunc = function()
+			local event = OnQuestHelp()
+			if self.cur_Click_QuestId == "" then
+				return
+			end
+			event.questId = self.cur_Click_QuestId
+			_UserService.LocalPlayer:SendEvent(event)	
+		end
+		self.btn_alert:ConnectEvent(ButtonClickEvent,alertFunc)
+		
+		self.btn_close = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/btn_close")
+		local closeUIEvent = function(event)
+			_UIController:KeyFunction(KeyboardKey.J)
+		end
+		self.btn_close:ConnectEvent(ButtonClickEvent,closeUIEvent)
+		
+		self.img_text = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_scroll_detail/scroll_detail/frame_conditionDesc/frame_imgtxt/img_item")
+		
+		self.frame_imgtxt = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_scroll_detail/scroll_detail/frame_conditionDesc/frame_imgtxt")
+		self.maxTextRectSize = self.frame_imgtxt.UITransformComponent.RectSize.x - 15
+		self.localPlayer = _UserService.LocalPlayer
+		self.txt_summation = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_scroll_detail/scroll_detail/txt_summation")
+		
+		self.txt_script = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_scroll_detail/scroll_detail/frame_conditionDesc/frame_imgtxt/txt_scripts")
+		self.fontSize = self.txt_script.TextComponent.FontSize
+		
+		_CustomText:FontWidthCache(self.fontSize)
+		self.fontHeight = _CustomText:GetFontHeight(self.fontSize)
+		self.txt_script.UITransformComponent.RectSize.y = self.fontHeight
+		
+		self.frame_scroll_detail = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_scroll_detail")
+		self.frame_quest = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_quest")
+		self.notice_selectQuest = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/notice_selectQuest")
+		
+		self._T.textCount = 0
+		self._T.textEntityTable = {self.txt_script}
+		for i = 2 ,32 do -- 예상하는 텍스트 엔티티의 개수를 32개로 설정한다. 색이 필요한 텍스트, 이미지, 개행 명령같은 경우에 텍스트가 만들어지고 그 수는 그다지 많지 않을 것.
+			table.insert(self._T.textEntityTable,_SpawnService:SpawnByEntity(self.txt_script,"text"..i,Vector3.zero,self.frame_imgtxt))
+		end
+		self._T.spawnedTextEntitys = {}
+		--------------------------------------------------------------------------------------
+		self.entityLoadComplete = true
+	end
+
+	method void EventConnectQuestType()
+		local mainFunc = function()
+			self:ListingTitle("main")
+		end
+		self.btn_quest_main:ConnectEvent(ButtonClickEvent,mainFunc)
+		local normalFunc = function()
+			self:ListingTitle("normal")
+		end
+		self.btn_quest_normal:ConnectEvent(ButtonClickEvent,normalFunc)
+		local diffFunc = function()
+			self:ListingTitle("diff")
+		end
+		self.btn_quest_difficult:ConnectEvent(ButtonClickEvent,diffFunc)
+		local dailyFunc = function()
+			self:ListingTitle("daily")
+		end
+		self.btn_quest_daily:ConnectEvent(ButtonClickEvent,dailyFunc)
+	end
+
+	method void ListingTitle(string group)
+		--log(group)
+		
+		self.cur_Click_Group = group
+		local userQuestManager = self.localPlayer.UserQuestManager
+		-- 그룹에 맞는 퀘스트들을 가져와야함.
+		local userQuest = userQuestManager:GetQuestGroups(group)
+		
+		-- userQuest = [questId,questId...]
+		if self._T.btn_title_Table == nil then
+			self._T.btn_title_Table = {self.btn_title}	
+		else	
+			for i = #userQuest + 1 , #self._T.btn_title_Table do
+				self._T.btn_title_Table[i].Enable = false
+			end
+		end
+		
+		if #userQuest == 0 then
+			self.txt_emptyQuest.Enable = true
+			return
+		else
+			self.txt_emptyQuest.Enable = false
+		end
+		
+		for i,questId in ipairs(userQuest) do
+			local title = _QuestManager:GetQuestTitle(questId)
+			if #self._T.btn_title_Table < i then
+				self._T.btn_title_Table[i] = _SpawnService:SpawnByEntity(self.btn_title,self.btn_title.Name..i,Vector3.zero,self.btn_title.Parent)
+			end
+			self._T.btn_title_Table[i].UIQuestTitleComponent:SetQuestId(questId)
+			self._T.btn_title_Table[i].Enable = true
+			local textComponent = self._T.btn_title_Table[i].TextComponent
+			textComponent.Text = title
+		end
+	end
+
+	method void OpenUI()
+		if self.entityLoadComplete == false then
+			return
+		end
+		if _UIButtonClickManager.clickEntity ~= self.btn_quest_main then
+			local btnClick = ButtonClickEvent()
+			btnClick.Entity = self.btn_quest_main
+			self.btn_quest_main:SendEvent(btnClick)
+		end
+		
+		self:ListingTitle("main")
+		self.Entity.Enable = true
+		self.frame_scroll_detail.Enable = false
+		self.frame_quest.Enable = false
+		self.notice_selectQuest.Enable = true
+	end
+
+	method void DetailQuest(string questId)
+		--log(questId)
+		self.notice_selectQuest.Enable = false
+		
+		self.cur_Click_QuestId = questId
+		
+		for i = 1, self._T.textCount do
+		    self._T.textEntityTable[i].UITransformComponent.RectSize.x = 1
+		    self._T.textEntityTable[i].TextComponent.Text = ""
+			self._T.textEntityTable[i].TextComponent.FontColor = Color(255,255,255,1.0)
+		end
+		self._T.textCount = 0
+		
+		for i = 1 , #self._T.spawnedTextEntitys do
+		    self._T.spawnedTextEntitys[i]:Destroy()
+		end
+		table.clear(self._T.spawnedTextEntitys)
+		self.txt_questTitle.TextComponent.Text = _QuestManager:GetQuestTitle(questId)
+		self.img_npc.SpriteGUIRendererComponent.ImageRUID = _QuestManager:GetQuestNpcImage(questId)
+		self:WrapTextForUI(_QuestManager:GetQuestSummation(questId))
+		self.txt_summation.TextComponent.Text = _QuestManager:GetQuestDesc(questId)
+		
+		self.frame_scroll_detail.Enable = true
+		self.frame_quest.Enable = true
+	end
+
+	method void WrapTextForUI(string cur_TextPage)
+		local utf8_TextTable = _UtillCustom:Split_utf8(cur_TextPage)
+		local textRectSizeX = 0.0
+		local fixedtext = ""
+		local cur_textEntity = self._T.textEntityTable[1]
+		self._T.textCount = 1
+		local cmdCountStack = 0
+		local colorCmd = false
+		
+		local TextBlockInit = function ()
+			cur_textEntity.UITransformComponent.RectSize.x = textRectSizeX
+			cur_textEntity.TextComponent.Text = fixedtext
+		
+			textRectSizeX = 0.0
+			fixedtext = ""
+		end
+		local SpawnNewText = function (dx,dy)
+			self._T.textCount += 1
+			local newTextEntity = self._T.textEntityTable[self._T.textCount]
+			newTextEntity.UITransformComponent.anchoredPosition.x = dx
+			newTextEntity.UITransformComponent.anchoredPosition.y = cur_textEntity.UITransformComponent.anchoredPosition.y + dy
+			if colorCmd then
+				newTextEntity.TextComponent.FontColor = cur_textEntity.TextComponent.FontColor
+			end
+			cur_textEntity = newTextEntity
+		end
+		
+		local xOffSet = 0
+		local yOffSet = 0
+		local imageCount = 0
+		local imageRectSize = self.img_text.UITransformComponent.RectSize
+		
+		
+		local idx = 0
+		while true
+		do
+			idx += 1
+			local char = utf8_TextTable[idx]
+			if char == nil then
+				break
+			end
+			if _CustomText:GetFontSizeWidth(self.fontSize,char) == nil then
+				log("nil is "..char)
+				continue
+			end
+			-- \(백슬래시) 명령어 처리
+			if char == '\\' or cmdCountStack == 1 then
+				cmdCountStack += 1
+				if cmdCountStack == 2 then
+					cmdCountStack = 0
+				end
+		        --self:CommandProcess(char)
+				if char == 'i' then
+		            TextBlockInit()
+		            local imageEntity = _SpawnService:SpawnByEntity(self.img_text,"img_text",Vector3.zero,self.img_text.Parent)
+		            table.insert(self._T.spawnedTextEntitys,imageEntity)
+		            imageCount += 1
+					local dx = cur_textEntity.UITransformComponent.anchoredPosition.x + cur_textEntity.UITransformComponent.RectSize.x
+					local dy = cur_textEntity.UITransformComponent.anchoredPosition.y
+					local isNewLine = false
+		            if xOffSet > self.maxTextRectSize then
+						dx = 0
+						dy = cur_textEntity.UITransformComponent.anchoredPosition.y - cur_textEntity.UITransformComponent.RectSize.y - yOffSet
+						xOffSet = 0
+						isNewLine = true		
+					end
+					
+		            imageEntity.UITransformComponent.anchoredPosition.x = dx 
+		            imageEntity.UITransformComponent.anchoredPosition.y = dy
+					
+		            if isNewLine then
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) -- 이미지 포지션 + 이미지 사이즈
+					else
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,0)
+					end
+		
+					-- 개행이 일어나지 않아 남은 rect사이즈를 체크해야한다.
+		            xOffSet = cur_textEntity.UITransformComponent.anchoredPosition.x
+		            yOffSet = math.abs((imageEntity.UITransformComponent.RectSize.y - cur_textEntity.UITransformComponent.RectSize.y))
+					
+					if utf8_TextTable[idx+1] == '<' then
+						idx = _CustomText:SetImageText(utf8_TextTable,imageEntity,idx)
+					end
+				elseif char == 'n' then
+					TextBlockInit()
+					SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
+					xOffSet = 0
+					yOffSet = 0
+				elseif char == 'c' then
+					if colorCmd then
+						colorCmd = false
+						TextBlockInit()
+						SpawnNewText(cur_textEntity.UITransformComponent.anchoredPosition.x + cur_textEntity.UITransformComponent.RectSize.x,0)
+					else
+						idx = _CustomText:SetColorText(utf8_TextTable,cur_textEntity,idx)
+						colorCmd = true
+					end
+				end
+		
+				continue
+			end
+			if textRectSizeX + xOffSet > self.maxTextRectSize then
+				-- 텍스트 박스 가로 크기를 넘어서려고 하면 다음 단으로 넘겨야함.
+				TextBlockInit()
+				SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
+				xOffSet = 0
+				yOffSet = 0
+			end
+			
+			if textRectSizeX == 0.0 then
+				if char == " " then
+					continue
+				end
+			end
+			
+			textRectSizeX += _CustomText:GetFontSizeWidth(self.fontSize,char)
+			fixedtext = fixedtext..char
+		end
+		
+		self._T.oldTotalTextRectSize = 0
+		cur_textEntity.UITransformComponent.RectSize.x = textRectSizeX
+		cur_textEntity.TextComponent.Text = fixedtext
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestComplete(OnQuestComplete event)
+		-- Parameters
+		-- local questId = event.questId
+		---------------------------------------------------------
+		self:ListingTitle(self.cur_Click_Group)
+	end
+
+end

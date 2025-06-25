@@ -1,0 +1,139 @@
+@Logic
+script QuestManager extends Logic
+
+	@Description("ReadOnly")
+	property any questInfos = nil
+
+	method void OnBeginPlay()
+		self.questInfos = {}
+		
+		local questTable = _DataService:GetTable("QuestTable")
+		
+		for idx, questId in ipairs(questTable:GetColumn("id")) do
+			if questId == "" then
+				continue
+			end
+			local questInfo = QuestInfo()
+			questInfo:SetScript(questId)
+		    self.questInfos[questId] = questInfo
+		end
+		
+		log("퀘스트 정보 불러오기 완료")
+	end
+
+	method QuestInfo GetQuestInfo(string questId)
+		local waitingCnt = 0
+		while true
+		do
+		    if waitingCnt >= 50 then
+				log(questId.."는 존재하지 않습니다.")
+				return nil
+			end
+			if self.questInfos[questId] == nil then
+				wait(0.1)
+				waitingCnt += 1
+				log("waiting.."..waitingCnt)
+		        continue
+		    end
+		    break 
+		end
+		return self.questInfos[questId]
+	end
+
+	@ExecSpace("ServerOnly")
+	method boolean GiveQuestReward(string questId, EntityRef player)
+		
+		local items = self.questInfos[questId].questReward["item"]
+		if items ~= nil then
+			local inventory = player.PlayerInventory
+			if inventory ~= nil then
+				-- 모든 보상이 들어 갈 수 있는지 확인을 해야함.
+				if inventory:CanReceiveItems(items) == false then
+					local cnt = 0
+					for itemId, _ in pairs(items) do
+						cnt += 1
+					end
+					log("보상을 받을 수 없습니다. 인벤토리 "..cnt.."칸이 필요합니다.")
+					return false
+				end
+		
+				for itemId, cnt in pairs(items) do
+					inventory:ModifyItem(itemId, cnt)
+				end
+			else 
+				return false
+			end
+		end
+		-- exp 는 인벤토리 여부와 관계없이 받을 수 있음.
+		local exp = self.questInfos[questId].questReward["exp"]
+		if exp ~= nil then
+			local event = OnExpUpdated()
+			event.exp = exp
+			player:SendEvent(event)	
+		end
+		
+		
+		return true
+		
+	end
+
+	method void SetUserQuestCondition(string questId, EntityRef player)
+		if self.questInfos[questId].questType["conversation"] then
+			player.UserQuestManager:SetConversationQuest(questId)
+			return
+		end
+		
+		local syncItemTable = {}
+		for type,type_condition in pairs(self.questInfos[questId].conditions) do
+			if type == "kill" then
+				for mob_Id,killCount in pairs(type_condition) do
+					player.UserQuestManager:SetKillCondition(questId,tonumber(mob_Id),killCount,0)			
+				end
+			elseif type == "item" then
+				for item_Id,itemCount in pairs(type_condition) do
+					player.UserQuestManager:SetItemCondition(questId,tonumber(item_Id),itemCount,0)			
+					table.insert(syncItemTable,item_Id)
+				end
+			end
+		end
+		
+		if self:IsServer() then
+			for i, item_Id in ipairs(syncItemTable) do
+				player.PlayerInventory:ModifyItem(tonumber(item_Id),0)	
+			end
+		end
+		
+	end
+
+	method string GetQuestTitle(string questId)
+		return self:GetQuestInfo(questId).title
+	end
+
+	method string GetQuestGroup(string questId)
+		return self:GetQuestInfo(questId).group
+	end
+
+	method string GetQuestNpcImage(string questId)
+		return self:GetQuestInfo(questId).npcImageRuid
+	end
+
+	method string GetQuestSummation(string questId)
+		return self:GetQuestInfo(questId).summation
+	end
+
+	method string GetQuestDesc(string questId)
+		return self:GetQuestInfo(questId).desc
+	end
+
+	method integer GetCompleteConditionCount(string questId, string type, integer id)
+		return self.questInfos[questId].conditions[type][tostring(id)]
+	end
+
+	method boolean IsConversationQuest(string questId)
+		if self:GetQuestInfo(questId).questType["conversation"] then
+		    return true
+		end
+		return false
+	end
+
+end

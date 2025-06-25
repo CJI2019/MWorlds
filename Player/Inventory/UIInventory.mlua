@@ -1,0 +1,245 @@
+@Component
+script UIInventory extends Component
+
+	property Entity itemUI = nil
+
+	property Entity scrollView = nil
+
+	property string inventoryBtnPath = "/ui/DefaultGroup/RPGButtons/btn_inventory"
+
+	property Entity money_countUI = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.itemUI =_EntityService:GetEntityByPath(self.Entity.Path .. "/InventoryPanel/Inventory_ScrollView/item_slot")
+		self.itemUI:SetEnable(false)
+		self.scrollView = _EntityService:GetEntityByPath(self.Entity.Path .. "/InventoryPanel/Inventory_ScrollView")
+		self.money_countUI = _EntityService:GetEntityByPath(self.Entity.Path .. "/InventoryPanel/CoinPanel/coin_count")
+		
+		local closeButton = _EntityService:GetEntityByPath(self.Entity.Path .. "/InventoryPanel/CloseButton")
+		local closeFunc = function()
+			_UIController:KeyFunction(KeyboardKey.I)
+		end
+		closeButton:ConnectEvent(ButtonClickEvent, closeFunc)
+		
+		-- 아이템 종류만큼 슬롯을 미리 생성
+		-- slotList로 인벤토리 UI에서 슬롯 리스트를 관리함
+		---@type table<EntityRef>
+		self._T.slotList = {}
+		
+		for i = 1, _UserService.LocalPlayer.PlayerInventory.MaxInventorySlot do
+		    local entity = self:AddSlot(i)
+			entity.UIItemSlot.inventoryIndex = i
+		    entity.UIItemSlot:SetCount(0)
+			self._T.slotList[i] = entity
+		end
+		
+		-- inventory closes at start
+		self.Entity.Enable = false
+		self._T.Drag = false
+	end
+
+	method Entity AddSlot(integer slotCount)
+		local itemSlot =_SpawnService:SpawnByEntity(self.itemUI, "Item"..slotCount, Vector3.zero, self.scrollView)
+		return itemSlot
+	end
+
+	@ExecSpace("ClientOnly")
+	method void SetMoneyCount(integer value)
+		local textcp = self.money_countUI.TextComponent
+		local str = tostring(value)
+		textcp.Text = str
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		if self._T.Drag == false then
+			return
+		end
+		
+		self._T.newpos = _InputService:GetCursorPosition()
+		local dx = self._T.oldpos.x - self._T.newpos.x
+		local dy = self._T.oldpos.y - self._T.newpos.y
+		local offx = 1920 / _UILogic.ScreenWidth
+		local offy = 1080 / _UILogic.ScreenHeight
+		
+		self._T.oldpos = self._T.newpos
+		
+		self.Entity.UITransformComponent:Translate(-dx*offx,-dy*offy)
+		
+		if self.Entity.UITransformComponent.Position.y < -540 or self.Entity.UITransformComponent.Position.y > 540 
+			or self.Entity.UITransformComponent.Position.x < -960 	or self.Entity.UITransformComponent.Position.x > 960 then
+			self.Entity.UITransformComponent:Translate(dx*offx,dy*offy)
+		    --log("ui",self.Entity.UITransformComponent.Position:ToVector2())
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	method void ChangeSlot(integer slotA_Inven_Id, integer slotB_Inven_Id)
+		-- 슬롯은 고정된 자리에 있는 엔티티이다. 참조를 바꾸는 것이 아닌 내용물을 바꿔야한다.
+		-- 서버에서는 데이터를 다루지만 클라에서는 보이는 객체 자체를 바꾸기 때문에 실제 내용물을 바꾸는 것이 맞다.
+		---@type EntityRef
+		local slotAEntity = self._T.slotList[slotA_Inven_Id]
+		local slotA = slotAEntity.UIItemSlot
+		
+		---@type EntityRef
+		local slotBEntity = self._T.slotList[slotB_Inven_Id] 
+		local slotB = slotBEntity.UIItemSlot
+		
+		slotA:ChangeItem(slotB)
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnInventoryInitialized(OnInventoryInitialized event)
+		-- Parameters
+		local SlotItemAmount = event.SlotItemAmount 		-- [인벤토리 인덱스] = 아이템개수
+		local SlotItemIndex = event.SlotItemIndex 	-- [인벤토리 인덱스] = 아이템테이블 인덱스
+		---------------------------------------------------------
+		for inven_idx, itemCount in pairs(SlotItemAmount) do
+			local itemtable_idx = SlotItemIndex[inven_idx]
+			if itemtable_idx == nil then
+				log("error")
+			end
+			if itemtable_idx == 0 then -- 빈 슬롯
+				continue
+			end
+			-- 슬롯 리스트가 정상인지 확인
+			if self._T.slotList == nil then
+				log("nil slot")
+		    	return
+			end
+			
+			local slot = self._T.slotList[inven_idx]
+		
+		    slot.UIItemSlot:SetData(itemtable_idx, inven_idx)
+			slot.UIItemSlot:SetCount(itemCount)
+		    --log(inven_idx.."-"..itemCount)
+		    --print("Init될 아이템 개수",i,itemCount)
+		end
+		
+		if self.money_countUI ~= nil then
+			local moneyModify = OnMoneyModified() -- 수정 이벤트를 발생시킨다. 초기화 시점에 메소 정보를 필요로 하는 요소를 위해 발생시킨다.
+			moneyModify.money_value = event.money_count
+			_UserService.LocalPlayer:SendEvent(moneyModify)
+			
+			self:SetMoneyCount(event.money_count)
+		end
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnInventoryModified(OnInventoryModified event)
+		-- Parameters
+		local itemIndex = event.itemIndex
+		local inventoryIndex_Table = event.inventoryIndex_Table
+		local itemCount_Table = event.itemCount_Table
+		---------------------------------------------------------
+		
+		if self._T.slotList == nil then
+			return
+		end
+		
+		for i = 1, #inventoryIndex_Table do
+			local itemCount = itemCount_Table[i]
+			local inv_Index = inventoryIndex_Table[i]
+			---@type Entity
+			local slot = self._T.slotList[inv_Index]
+			
+			if slot.UIItemSlot.itemCount == 0 and itemCount > 0 then
+				slot.UIItemSlot:SetData(itemIndex)
+			end
+			slot.UIItemSlot:SetCount(itemCount)
+		end
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnMoneyModified(OnMoneyModified event)
+		if self.money_countUI ~= nil then
+			self:SetMoneyCount(event.money_value)
+		end
+	end
+
+	@EventSender("Entity", "931f5076-2576-4343-8ba0-7a1e7fcf83c9")
+	handler HandleUITouchDownEvent(UITouchDownEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		self._T.oldpos = _InputService:GetCursorPosition():ToVector2Int()
+		self._T.oldpos = self._T.oldpos:ToVector2() 
+		self._T.Drag = true
+	end
+
+	@EventSender("Entity", "931f5076-2576-4343-8ba0-7a1e7fcf83c9")
+	handler HandleUITouchUpEvent(UITouchUpEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: UITouchReceiveComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local Entity = event.Entity
+		-- local TouchId = event.TouchId
+		-- local TouchPoint = event.TouchPoint
+		---------------------------------------------------------
+		self._T.Drag = false
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnEquipItem(OnEquipItem event)
+		---@type Entity
+		local entity = self._T.slotList[event.inventoryIndex]
+		entity.UIItemSlot:SetEquipTag(event.willEquip)
+		log(event.inventoryIndex.."번 칸의 아이템 EquipEvent 발생")
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnInventoryItemRemoved(OnInventorySlotItemRemoved event)
+		-- Parameters
+		-- local itemIndex = event.itemIndex
+		 local inventoryIndex = event.inventoryIndex
+		---------------------------------------------------------
+		---@type Entity
+		local slot = self._T.slotList[inventoryIndex]
+		
+		slot.UIItemSlot:InitSlot()
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleOnInventorySlotChange(OnInventorySlotChange event)
+		-- Parameters
+		local slotA_Inventory_Index = event.slotA_Inventory_Index
+		local slotB_Inventory_Index = event.slotB_Inventory_Index
+		---------------------------------------------------------
+		self:ChangeSlot(slotA_Inventory_Index,slotB_Inventory_Index)
+	end
+
+	@ExecSpace("ClientOnly")
+	@EventSender("LocalPlayer")
+	handler HandleSyncItemAbilityData(SyncItemAbilityData event)
+		-- Parameters
+		local inventoryIndex_Table = event.inventoryIndex_Table
+		local itemLevels = event.itemLevels
+		local skillIds = event.skillIds
+		---------------------------------------------------------
+		for i,inv in ipairs(inventoryIndex_Table) do
+			---@type EntityRef
+			local slotEntity = self._T.slotList[inv]
+			local slot = slotEntity.UIItemSlot
+			if slot == nil then
+				continue
+			end
+			slot:ConstructAbility(itemLevels[i])
+			slot:ConstructSkill(skillIds[i])
+		end
+		
+	end
+
+end

@@ -1,0 +1,46 @@
+@Component
+script UIMoveComponent extends Component
+
+	property EntityRef touchUI = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.touchUI:ConnectEvent(UITouchDownEvent,self.Activate)
+		self.touchUI:ConnectEvent(UITouchUpEvent,self.DeActivate)
+		self.Enable = false
+	end
+
+	method void Activate()
+		self._T.oldpos = _InputService:GetCursorPosition():ToVector2Int()
+		self._T.oldpos = self._T.oldpos:ToVector2()
+		self.Enable = true
+	end
+
+	method void DeActivate()
+		self.Enable = false
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		self._T.newpos = _InputService:GetCursorPosition()
+		local dx = self._T.oldpos.x - self._T.newpos.x
+		local dy = self._T.oldpos.y - self._T.newpos.y
+		local offx = 1920 / _UILogic.ScreenWidth
+		local offy = 1080 / _UILogic.ScreenHeight
+		
+		self._T.oldpos = self._T.newpos
+		
+		self.Entity.UITransformComponent:Translate(-dx*offx,-dy*offy)
+		
+		if self.Entity.UITransformComponent.anchoredPosition.y < 0 
+		or self.Entity.UITransformComponent.anchoredPosition.y > 1080 - self.Entity.UITransformComponent.RectSize.y
+		or self.Entity.UITransformComponent.anchoredPosition.x < 0 
+		or self.Entity.UITransformComponent.anchoredPosition.x > 1920 - self.Entity.UITransformComponent.RectSize.x then
+			
+			self.Entity.UITransformComponent:Translate(dx*offx,dy*offy)
+			
+		end
+		--log(self.Entity.UITransformComponent.anchoredPosition.y)
+	end
+
+end

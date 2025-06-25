@@ -1,0 +1,11 @@
+@State
+script DeadState extends StateType
+
+	method void OnEnter()
+		local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
+		
+		spriteRenderer.SpriteRUID = self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["die"]
+		--spriteRenderer.PlayRate = 0.8
+	end
+
+end

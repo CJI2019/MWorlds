@@ -1,0 +1,68 @@
+@Component
+script ItemBoxComponent extends Component
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		    local state = self.Entity.StateComponent
+		
+		    state:AddState("BROKEN", BrokenBox)
+		    state:AddCondition("BROKEN", "DEAD")
+	end
+
+	@EventSender("Self")
+	handler HandleStateChangeEvent(StateChangeEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: StateComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local CurrentStateName = event.CurrentStateName
+		-- local PrevStateName = event.PrevStateName
+		---------------------------------------------------------
+		
+		    -- There's no BROKEN state on client side of StateComponent.
+		    if self:IsServer() then
+		    	if event.CurrentStateName == "HIT" then
+		    		self.Entity.StateComponent:ChangeState("BROKEN")
+		    	elseif event.CurrentStateName == "DEAD" then
+		    		_TimerService:SetTimerOnce(function() self.Entity.StateComponent:ChangeState("IDLE") end, 5)
+		    	end
+		    else
+		    	if event.CurrentStateName == "IDLE" then
+		    		self.Entity.SpriteRendererComponent.Color.a = 1
+		    	end
+		    end
+	end
+
+	@EventSender("Self")
+	handler HandleSpriteAnimPlayerEndFrameEvent(SpriteAnimPlayerEndFrameEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: ClimbableSpriteRendererComponent
+		-- Space: Client
+		---------------------------------------------------------
+		-- Sender: SpriteRendererComponent
+		-- Space: Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local FrameIndex = event.FrameIndex
+		-- local ReversePlaying = event.ReversePlaying
+		-- local TotalFrameCount = event.TotalFrameCount
+		-- local AnimPlayer = event.AnimPlayer
+		---------------------------------------------------------
+		if event.TotalFrameCount > 1 then
+		    	self.Entity.SpriteRendererComponent.Color.a = 0 
+		end
+	end
+
+	@EventSender("Self")
+	handler HandleMyAttackEvent(MyAttackEvent event)
+		-- Parameters
+		-- local attacker = event.attacker
+		-- local skillId = event.skillId
+		---------------------------------------------------------
+		self.Entity.StateComponent:ChangeState("HIT")
+	end
+
+end

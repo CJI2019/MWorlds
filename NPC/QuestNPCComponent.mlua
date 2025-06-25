@@ -1,0 +1,168 @@
+@Component
+script QuestNPCComponent extends NPCComponent
+
+	property string questIds = ""
+
+	property table questIdTable = {}
+
+	property table localUserQuestProgress = {}
+
+	property EntityRef questIcon = ""
+
+	property table myQuestInfos = {}
+
+	method void OnBeginPlay()
+		if self:IsClient() then
+			self._T.questWaitingIcon = self.Entity:GetChildByName("quest0") 
+			self._T.questInProgressIcon = self.Entity:GetChildByName("quest1") 
+			self._T.questCompleteIcon = self.Entity:GetChildByName("quest2") 
+			
+			local questIcon_TouchEventFunction = function(event)
+			    --log("Icon터치")
+				self:TouchLogic(event)
+			end
+			
+			self._T.questWaitingIcon:ConnectEvent(TouchEvent,questIcon_TouchEventFunction)
+			self._T.questInProgressIcon:ConnectEvent(TouchEvent,questIcon_TouchEventFunction)
+			self._T.questCompleteIcon:ConnectEvent(TouchEvent,questIcon_TouchEventFunction)
+		end
+		
+		self.questIdTable = _UtilLogic:Split(self.questIds,",")
+		
+		for idx, questId in ipairs(self.questIdTable) do
+			self.localUserQuestProgress[questId] = 0
+			-- 주소값 같음을 확인함. 즉, 참조 값이라는 뜻. 복사가 안일어 나므로 효율적. 단 ReadOnly여야함
+			self.myQuestInfos[questId] = _QuestManager:GetQuestInfo(questId)
+		end
+		
+		if self:IsServer() then
+		
+		end
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	method void Interaction()
+		__base:Interaction()
+		if self.questIcon == nil then
+			return
+		end
+		_UserService.LocalPlayer.PlayerQuestComponent:QuestInteraction(self.Entity)
+	end
+
+	@ExecSpace("Client")
+	method void SetQuestProgress(table sc_QuestIdAndProgressTablePacket)
+		-- 진행도 갱신
+		for questId,progress in pairs(sc_QuestIdAndProgressTablePacket) do
+		    --log(questId..":"..progress)
+			self.localUserQuestProgress[questId] = progress	
+		end
+		-- A 마을에 NPC 마야 가 Q2 퀘스트를 진행할 수 있는데 Q2 퀘스트는 선행으로 Q1이 완료되어야함.
+		-- Q1 퀘스트의 진행도를 가진 NPC는 B 마을에 존재.
+		-- 현재 구현 코드로는 NPC 마야가 선행퀘스트 Q1이 완료 되었는지 확인할 방도가 없음.
+		if self.questIcon ~= nil then
+		    self.questIcon:SetEnable(false)
+		end
+		self.questIcon = nil
+		
+		for questId,progress in pairs(self.localUserQuestProgress) do
+			if self:IsAvailableQuest(questId) == false then
+				if progress == 3 then
+					log(questId.." : 이미 완료된 퀘스트 입니다.")
+					continue
+				end
+				log(questId.." : 진행이 불가능한 퀘스트입니다.")
+				continue
+			end
+			
+			local isStartNpc = self.myQuestInfos[questId]:CheckNPCPathExists(self.Entity.Path,true)
+			if progress == 0 then
+			    if isStartNpc then
+		    	    self.questIcon = self._T.questWaitingIcon
+			    end
+		
+			elseif progress == 1 then
+			    self.questIcon = self._T.questInProgressIcon	
+			
+			elseif progress == 2 then
+			    if isStartNpc then
+			        self.questIcon = self._T.questInProgressIcon	
+			    end
+				
+				local isEndNpc = self.myQuestInfos[questId]:CheckNPCPathExists(self.Entity.Path,false)
+			    if isEndNpc then
+			        self.questIcon = self._T.questCompleteIcon
+					break
+			    end
+			end
+		end
+		
+		if self.questIcon ~= nil then
+		    self.questIcon:SetEnable(true)	
+		end
+	end
+
+	method boolean IsAvailableQuest(string questId)
+		if self.localUserQuestProgress[questId] == 3 or self.myQuestInfos[questId] == nil then
+			return false
+		end
+		
+		if self.localUserQuestProgress[questId] == 0 then
+			if _QuestManager:GetQuestInfo(questId):CheckNPCPathExists(self.Entity.Path,true) == false then
+				if _QuestManager:GetQuestInfo(questId):CheckNPCPathExists(self.Entity.Path,false) then -- end NPC 일때 시작하지 못하도록 한다.
+					return false
+				end
+			end
+		end
+		
+		local conditions = self.myQuestInfos[questId]:GetRequiredQuestIDTable()
+		if #conditions == 0 then
+			return true
+		end
+		
+		for _, q_id in ipairs(conditions) do
+			if self.localUserQuestProgress[q_id] == nil then
+				log("선행퀘스트 진행도를 서버에서 전달받지 못했습니다.")
+			end
+			
+			if self.localUserQuestProgress[q_id] ~= 3 then
+				return false
+			end
+		end
+		
+		return true
+	end
+
+	method table GetAvailableQuestDict()
+		local cnt = 0
+		local availableQuest = {}
+		availableQuest["questTable"] = {}
+		
+		for _,id in ipairs(self.questIdTable) do
+			if self:IsAvailableQuest(id) then
+				table.insert(availableQuest["questTable"],id)
+				cnt += 1		
+			end
+		end
+		availableQuest["count"] =  cnt
+		
+		--log("가능한 퀘스트의 수는 "..availableQuest["count"])
+		--log("퀘스트테이블의 개수는 ".. #availableQuest["questTable"])
+		return availableQuest
+		
+	end
+
+	method integer GetQuestIdProgress(string questId)
+		if self.localUserQuestProgress[questId] == 2 then -- 완료단계일때
+			local isEndNpc = _QuestManager:GetQuestInfo(questId):CheckNPCPathExists(self.Entity.Path,false)
+			if isEndNpc then
+				return self.localUserQuestProgress[questId]
+			else
+				return 1
+			end
+		end
+		
+		return self.localUserQuestProgress[questId]
+	end
+
+end

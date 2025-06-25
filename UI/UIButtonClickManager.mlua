@@ -1,0 +1,6 @@
+@Logic
+script UIButtonClickManager extends Logic
+
+	property EntityRef clickEntity = nil
+
+end

@@ -1,0 +1,38 @@
+@Struct
+script ConsumptiontItemStuct extends ItemStruct
+
+	method boolean Use(EntityRef entity)
+		--__base:Use()
+		local player = entity.PlayerComponent
+		if player and player:IsDead() then
+			return false
+		end
+		
+		self:HPHeal(entity,5)
+		
+		return true
+	end
+
+	method void HPHeal(EntityRef entity, number value)
+		entity.PlayerComponent.Hp += value
+		if entity.PlayerComponent.Hp > entity.PlayerComponent.MaxHp then
+			entity.PlayerComponent.Hp = entity.PlayerComponent.MaxHp
+		end
+		
+		entity.AbilityComponent:SyncHP(entity.PlayerComponent.UserId)
+	end
+
+	method boolean IsConsumable()
+		return true
+	end
+
+	method void SPHeal(EntityRef entity, number value)
+		entity.AbilityComponent.sp += value
+		if entity.AbilityComponent.sp > entity.AbilityComponent.maxSP then
+			entity.AbilityComponent.sp = entity.AbilityComponent.maxSP
+		end
+		
+		entity.AbilityComponent:SyncSP(entity.PlayerComponent.UserId)
+	end
+
+end

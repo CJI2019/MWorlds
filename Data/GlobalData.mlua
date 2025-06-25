@@ -1,0 +1,324 @@
+@Logic
+script GlobalData extends Logic
+
+	property table monsterTable = {}
+
+	property table itemTable = {}
+
+	property table skillTable = {}
+
+	property table equipmentTable = {}
+
+	property table skillTypeTable = {}
+
+	property table mesoLevelTable = {}
+
+	property table weaponLevelAbilityTable = {}
+
+	property table enchantCostTable = {}
+
+	method void OnBeginPlay()
+		math.randomseed(os.time()) -- 현재 시간을 시드로 설정
+		
+		self:MonsterDataLoad()
+		self:ItemDataLoad()
+		self:SkillDataLoad()
+		self:EquipmentItemDataLoad() -- ItemDataLoad 이후 호출한다. 장비아이템의 ruid를 재사용할 것이기 때문 thumbnail:// 부분을 제외하고 저장해야함.
+		self:MesoLevelDataLoad()
+		self:WeaponLevelAbilityDataLoad()
+		self:EnchantCostDataLoad()
+		log("GlobalData Load Finish")
+	end
+
+	method void MonsterDataLoad()
+		local monsterSet = _DataService:GetTable("MonsterDataTable")
+		
+		--self.monsterTable => name : data
+		for i = 1 ,monsterSet:GetRowCount() do
+			local monster = monsterSet:GetRow(i)
+			local monsterInfo = MonsterInfo()
+			monsterInfo.name = monster:GetItem("name")
+			for _, item in ipairs(_UtilLogic:Split(monster:GetItem("items"),',')) do
+				--item => 5:100 (아이템번호:확률) => 노션에 적어둔 확률 계산식 보자.
+				local split_item = _UtilLogic:Split(item,':')
+				monsterInfo.items[split_item[1]] = split_item[2]
+			end
+		    monsterInfo.level = tonumber(monster:GetItem("level"))
+		    monsterInfo.power = tonumber(monster:GetItem("power"))
+			monsterInfo.monsterId = monster:GetItem("id")
+			monsterInfo.exp = tonumber(monster:GetItem("exp"))
+			monsterInfo.maxHp = tonumber(monster:GetItem("maxHp"))
+			monsterInfo.defense = tonumber(monster:GetItem("defense"))
+			
+			self.monsterTable[monsterInfo.monsterId] = monsterInfo
+		end
+		
+		--for k,v in pairs(self.monsterTable) do
+		--    log(k.."=>"..type(k))
+		--    
+		--    log(v)
+		--end
+		
+	end
+
+	method string GetMonsterName(string monster_Id)
+		return self.monsterTable[monster_Id].name
+	end
+
+	method MonsterInfo GetMonsterBeginPlay(string monster_Id)
+		while true do
+			if self.monsterTable[monster_Id] == nil then
+				continue
+			end
+			break
+		end
+		
+		return self.monsterTable[monster_Id]
+	end
+
+	method MonsterInfo GetMonster(string monster_Id)
+		return self.monsterTable[monster_Id]
+	end
+
+	method void ItemDataLoad()
+		local itemSet = _DataService:GetTable("ItemDataTable")
+		
+		--self.monsterTable => name : data
+		for i = 1 ,itemSet:GetRowCount() do
+			local itemInfo = ItemInfo()
+			local itemRow = itemSet:GetRow(i)
+		
+			itemInfo.name = itemRow:GetItem("name")
+			itemInfo.ruid = itemRow:GetItem("IconRUID")
+			itemInfo.buyprice = tonumber(itemRow:GetItem("buy"))
+			itemInfo.sellprice = tonumber(itemRow:GetItem("sell"))
+			itemInfo.description = itemRow:GetItem("desc")
+			itemInfo.shopItemId = -1 --상점NPC만 가지는 값
+			itemInfo.item_Id = itemRow:GetItem("ID")
+			itemInfo.isUse = tonumber(itemRow:GetItem("isUse"))
+			itemInfo.type = itemRow:GetItem("type")
+			if itemInfo.type == "장비" then
+				itemInfo.ruid = "thumbnail://"..itemInfo.ruid
+			end
+			
+			self.itemTable[itemInfo.item_Id] = itemInfo
+		end
+	end
+
+	method string GetItemName(string item_Id)
+		return self.itemTable[item_Id].name
+	end
+
+	method void SkillDataLoad()
+		local skillSet = _DataService:GetTable("SkillDataTable")
+		
+		for i = 1 , skillSet:GetRowCount() do
+			local skill = skillSet:GetRow(i)
+			local skill_Info = SkillInfo()
+			skill_Info.id = skill:GetItem("id")
+			skill_Info.skillRUID = skill:GetItem("skillRUID")
+			skill_Info.name = skill:GetItem("name")
+			skill_Info.type = skill:GetItem("type")
+			skill_Info.power = tonumber(skill:GetItem("power"))
+			skill_Info.hitcount = tonumber(skill:GetItem("hitcount"))
+			skill_Info.damageSkinDelay = tonumber(skill:GetItem("damageSkinDelay"))
+			skill_Info.hitOffsetX = tonumber(skill:GetItem("hitOffsetX"))
+			skill_Info.hitOffsetY = tonumber(skill:GetItem("hitOffsetY"))
+			
+			local hitBoxSize = _UtilLogic:Split(skill:GetItem("hitBoxSize"),",")
+			skill_Info.hitBoxSizeX = tonumber(hitBoxSize[1])
+			skill_Info.hitBoxSizeY = tonumber(hitBoxSize[2])
+		
+			skill_Info.iconRUID = skill:GetItem("iconRUID")
+			skill_Info.soundRUID = skill:GetItem("soundRUID")
+			skill_Info.hitRUID = skill:GetItem("hitRUID")
+			local weaponTypes = skill:GetItem("weaponTypes")
+			skill_Info.rating = tonumber(skill:GetItem("rating"))
+			if(weaponTypes == "*") then
+				local typeTable = {"단검","한손검","두손검","활","너클","스태프","완드","권총"}
+				for _,type in pairs(typeTable) do
+					skill_Info.weaponTypes[type] = true
+					if self.skillTypeTable[type] == nil then
+						self.skillTypeTable[type] = {}
+					end
+					if self.skillTypeTable[type][skill_Info.rating] == nil then
+						self.skillTypeTable[type][skill_Info.rating] = {}
+					end
+					table.insert(self.skillTypeTable[type][skill_Info.rating],skill_Info.id)
+				end
+			else
+				for _,type in ipairs(_UtilLogic:Split(weaponTypes,",")) do
+					skill_Info.weaponTypes[type] = true	
+					
+					if self.skillTypeTable[type] == nil then
+						self.skillTypeTable[type] = {}
+					end
+					if self.skillTypeTable[type][skill_Info.rating] == nil then
+						self.skillTypeTable[type][skill_Info.rating] = {}
+					end
+					table.insert(self.skillTypeTable[type][skill_Info.rating],skill_Info.id)
+				end
+			end
+			skill_Info.coreActionName = skill:GetItem("coreActionName")
+			skill_Info.partsActionName = skill:GetItem("partsActionName")  
+			skill_Info.attached = skill:GetItem("attached") == "1" and true or false
+			skill_Info.actionPlayRate = tonumber(skill:GetItem("actionPlayRate"))
+			skill_Info.hitDelay = tonumber(skill:GetItem("hitDelay"))
+			self.skillTable[skill_Info.id] = skill_Info
+		end
+	end
+
+	method SkillInfo GetSkillInfo(string skill_Id)
+		return self.skillTable[skill_Id]
+	end
+
+	method ItemInfo GetItem(string itemId)
+		return self.itemTable[itemId]
+	end
+
+	method void EquipmentItemDataLoad()
+		local equipmentSet = _DataService:GetTable("EquipmentInfoTable")
+		
+		--self.monsterTable => name : data
+		for i = 1 ,equipmentSet:GetRowCount() do
+			local equipment = EquipmentItemInfo()
+			local itemRow = equipmentSet:GetRow(i)
+			
+			local id = tonumber(itemRow:GetItem("id"))
+			equipment.name = itemRow:GetItem("name")
+			equipment.rating = tonumber(itemRow:GetItem("rating"))
+			equipment.power = tonumber(itemRow:GetItem("power"))
+			equipment.isTwoHand = tonumber(itemRow:GetItem("isTwoHand")) == 1 and true or false
+			--"thumbnail://"를 자른다.
+			local tempRuid = self:GetItem(itemRow:GetItem("id")).ruid
+			equipment.ruid = string.sub(tempRuid,13)
+			equipment.partType = itemRow:GetItem("partType")
+			equipment.weaponType = itemRow:GetItem("weaponType")
+			self.equipmentTable[id] = equipment
+		end
+	end
+
+	method EquipmentItemInfo GetEquipmentItem(integer item_Id)
+		return self.equipmentTable[item_Id]
+	end
+
+	method table GetSkillTypeTable(string type)
+		return self.skillTypeTable[type]
+	end
+
+	method void MesoLevelDataLoad()
+		local mesoLevelSet = _DataService:GetTable("MesoLevelTable")
+		
+		--self.monsterTable => name : data
+		---@type integer
+		local last = 1
+		for i = 1 ,mesoLevelSet:GetRowCount() do
+			local mesoLevel = mesoLevelSet:GetRow(i)
+			---@type integer
+		    local level = tonumber(mesoLevel:GetItem("level"))
+			local min = tonumber(mesoLevel:GetItem("min"))
+			local max = tonumber(mesoLevel:GetItem("max"))
+			-- 해당하는 레벨에서 드랍되는 메소의 범위(min~max) 값을 저장
+			for l = last, level do
+				self.mesoLevelTable[l] = { min,max }
+			end
+			
+			last = level + 1
+		end
+		
+		self._T.mesoSpriteTypes = {}
+		self._T.mesoSpriteTypes[1] = 49
+		self._T.mesoSpriteTypes[2] = 99 
+		self._T.mesoSpriteTypes[3] = 499
+	end
+
+	method number GetRandomMeso(integer level)
+		return math.random(self.mesoLevelTable[level][1],self.mesoLevelTable[level][2])
+	end
+
+	method integer GetMesoSpriteType(number meso, integer depth)
+		if meso < self._T.mesoSpriteTypes[depth] then
+			return depth
+		end
+		
+		if self._T.mesoSpriteTypes[depth + 1] == nil then
+			return depth + 1
+		end
+		
+		return self:GetMesoSpriteType(meso,depth + 1)
+	end
+
+	method void WeaponLevelAbilityDataLoad()
+		local weaponLevelAbilitySet = _DataService:GetTable("WeaponLevelAbilityTable")
+		
+		---@type integer
+		local last = 1
+		
+		for i = 1 ,weaponLevelAbilitySet:GetRowCount() do
+			local ability = weaponLevelAbilitySet:GetRow(i)
+			--rating,level,power,defense,critical,critical_Damage,skill_Damage,hp,sp
+			---@type integer
+		    local rating = tonumber(ability:GetItem("rating"))
+			local levelRange = _UtilLogic:Split(ability:GetItem("level"),"~")
+			---@type integer
+			local minLevel = tonumber(levelRange[1])
+			local maxLevel = tonumber(levelRange[2])
+			local power = tonumber(ability:GetItem("power"))
+			local defense = tonumber(ability:GetItem("defense"))
+			local critical = tonumber(ability:GetItem("critical"))
+			local critical_Damage = tonumber(ability:GetItem("critical_Damage"))
+			local skill_Damage = tonumber(ability:GetItem("skill_Damage"))
+			local hp = tonumber(ability:GetItem("hp"))
+			local sp = tonumber(ability:GetItem("sp"))
+			
+			for l = minLevel, maxLevel do
+				if self.weaponLevelAbilityTable[rating] == nil then
+					self.weaponLevelAbilityTable[rating] = {}
+				end
+				local abilityInfo = EquipmentAbilityInfo()
+				abilityInfo.power = power * l
+				abilityInfo.defense = defense * l
+				abilityInfo.critical = critical * l
+				abilityInfo.critical_Damage = critical_Damage * l
+				abilityInfo.skill_Damage = skill_Damage * l
+				abilityInfo.hp = hp * l
+				abilityInfo.sp = sp * l
+				abilityInfo.level = l
+				self.weaponLevelAbilityTable[rating][l] = abilityInfo
+			end
+		end
+	end
+
+	method EquipmentAbilityInfo GetWeaponLevelAbility(integer rating, integer level)
+		return self.weaponLevelAbilityTable[rating][level]
+	end
+
+	method void EnchantCostDataLoad()
+		local enchantCostSet = _DataService:GetTable("EnchantCostTable")
+		local max_rating = 9
+		for i = 1 ,enchantCostSet:GetRowCount() do
+			local enchantCost = enchantCostSet:GetRow(i)
+			---@type integer
+		    local itemLevel = tonumber(enchantCost:GetItem("level"))
+			local prob = tonumber(enchantCost:GetItem("probability"))
+			self.enchantCostTable[itemLevel] = {
+				prob = prob,
+				cost = {}
+			}
+			
+			for rating = 1, max_rating do
+				local cost = tonumber(enchantCost:GetItem(tostring(rating)))
+				table.insert(self.enchantCostTable[itemLevel]["cost"],cost)
+			end
+		end
+	end
+
+	method integer GetEnchantCost(integer itemLevel, integer rating)
+		return self.enchantCostTable[itemLevel]["cost"][rating]
+	end
+
+	method number GetEnchantProbability(integer itemLevel)
+		return self.enchantCostTable[itemLevel]["prob"]
+	end
+
+end

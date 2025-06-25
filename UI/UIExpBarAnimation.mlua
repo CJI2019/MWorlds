@@ -1,0 +1,59 @@
+@Component
+script UIExpBarAnimation extends Component
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self._T.goalExp = 0.0
+		self._T.oldExp = 0.0
+		self._T.curr_Exp = 0.0
+		self._T.requireExp = 0.0
+		self._T.elapsed_Time = 0.0
+		self._T.isLevelUp = false
+		self.Enable = false
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		self._T.elapsed_Time += delta
+		if self._T.isLevelUp == false then
+			local add = self._T.requireExp * self._T.elapsed_Time
+			self._T.curr_Exp = self._T.oldExp + add
+			if self._T.curr_Exp > self._T.goalExp then
+			    self._T.curr_Exp = self._T.goalExp
+				self.Enable = false
+			end
+		else
+			local add = -1.0 * self._T.elapsed_Time
+			self._T.curr_Exp = self._T.oldExp2 + add
+			if self._T.curr_Exp < 0.0 then
+			    self._T.curr_Exp = 0.0
+				self._T.oldExp = self._T.curr_Exp
+				self._T.elapsed_Time = 0.0
+				self._T.requireExp = self._T.goalExp
+				self._T.isLevelUp = false
+				if self._T.goalExp == self._T.curr_Exp then
+					self.Enable = false
+				end
+			end
+		end
+		
+		local changeValue = {["ClippingRight"] = 1.0 - (self._T.curr_Exp);}
+		_MaterialService:ChangeMaterialProperty("material://307f5f53-96b2-4644-92cf-912b395e2772",changeValue) 
+	end
+
+	method void InitExp()
+		self._T.isLevelUp = true
+		self._T.oldExp2 = self._T.curr_Exp
+		self._T.elapsed_Time = 0.0
+		self.Enable = true
+	end
+
+	method void SetExp(number value)
+		self._T.goalExp = value
+		self._T.oldExp = self._T.curr_Exp
+		self._T.requireExp = self._T.goalExp - self._T.curr_Exp
+		self._T.elapsed_Time = 0.0
+		self.Enable = true
+	end
+
+end

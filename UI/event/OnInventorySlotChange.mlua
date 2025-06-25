@@ -1,0 +1,8 @@
+@Event
+script OnInventorySlotChange extends EventType
+
+	property integer slotA_Inventory_Index = 0
+
+	property integer slotB_Inventory_Index = 0
+
+end

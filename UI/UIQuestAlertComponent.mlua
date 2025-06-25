@@ -1,0 +1,88 @@
+@Component
+script UIQuestAlertComponent extends Component
+
+	property EntityRef txt_title = nil
+
+	property EntityRef txt_bottom = nil
+
+	property Vector2 origin_Pos = Vector2(0,0)
+
+	property number goal_Xpos = 0
+
+	property number dir = 0
+
+	property any tween = nil
+
+	property table timerQueue = {}
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self.txt_title = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_title")
+		self.txt_bottom = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_bottom")
+		self.origin_Pos = self.Entity.UITransformComponent.anchoredPosition
+		self.goal_Xpos = self.Entity.UITransformComponent.RectSize.x
+		self.dir = 1
+		
+		self._T.deltaTime = 0
+	end
+
+	method void NoticeAnimation()
+		if self._T.deltaTime >= 2 then
+			self.Entity.Enable = false
+			table.remove(self.timerQueue,1)
+			if #self.timerQueue > 0 then
+				self:AnimationOn()
+			end
+			return
+		end
+		self:Timer()
+	end
+
+	method void Timer()
+		local T = 1  -- 주기 (초)
+		local max_X = self.goal_Xpos  -- x의 최대값
+		local callFrequency = 0.01
+		-- 시간 t에 따른 x 값 계산 함수
+		local anime = function()
+			-- 0.5~ 1.5 구간은 멈춰야함.
+			self._T.deltaTime += callFrequency
+		    local normalized_t = self._T.deltaTime % T
+			if self._T.deltaTime >= 0.5 and self._T.deltaTime <= 1.5 then
+				normalized_t = 0.5 % T
+			elseif self._T.deltaTime > 1.5 then
+				normalized_t = (self._T.deltaTime - 1.0) % T
+			end
+		    local x = max_X * math.abs(math.sin(math.pi * normalized_t / T))
+			self.Entity.UITransformComponent.anchoredPosition.x = x
+			self:NoticeAnimation()
+		end
+		_TimerService:SetTimerOnce(anime,callFrequency)
+	end
+
+	method void AnimationOn()
+		if #self.timerQueue == 0 then
+			return
+		end
+		
+		self.txt_title.TextComponent.Text = self.timerQueue[1]
+		
+		self._T.deltaTime = 0
+		self.Entity.Enable = true
+		self:NoticeAnimation()
+	end
+
+	@EventSender("LocalPlayer")
+	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
+		-- Parameters
+		local questId = event.questId
+		local progress = event.progress
+		---------------------------------------------------------
+		if progress == 2 then
+			table.insert(self.timerQueue,_QuestManager:GetQuestTitle(questId))
+			if #self.timerQueue == 1 then
+				self:AnimationOn()
+			end
+		end
+	end
+
+end

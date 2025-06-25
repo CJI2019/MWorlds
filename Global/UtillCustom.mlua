@@ -1,0 +1,12 @@
+@Logic
+script UtillCustom extends Logic
+
+	method table Split_utf8(string str)
+		local chars = {}
+		for _, codepoint in utf8.codes(str) do
+			table.insert(chars, utf8.char(codepoint))
+		end
+		return chars
+	end
+
+end

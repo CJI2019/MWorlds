@@ -1,0 +1,83 @@
+@Component
+script Plant extends Component
+
+	@Sync
+	property integer ItemTableNum = 0
+
+	property any CollisionGroup = nil
+
+	property number respawntime = 0
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		self.CollisionGroup = self.Entity.TriggerComponent.CollisionGroup
+		self.respawntime = 10
+	end
+
+	@ExecSpace("Server")
+	method void Complete()
+		local spawn_location = self.Entity.SpriteInfoComponent:GetItemSpawnLocation()
+		local itemEntity = _SpawnService:SpawnByModelId("model://maplestoryitem$0039bd125ebb4666a5e6fb27842cfdc7",
+		     "Item", spawn_location, self.Entity.Parent)
+		itemEntity.DropItemComponent:InitItem(self.ItemTableNum)
+		
+		-- 엔티티를 삭제하지 않고 재사용 할 것이므로 알파값은 0으로 트리거는 오버랩 안되게 설정한다.
+		-- 이후 리스폰을 하게되면 초기상태로 다시 되돌린다.
+		local respawnfunction = function()
+			self.Entity.TriggerComponent.CollisionGroup = self.CollisionGroup
+			self:ColorAlphaTrigger(true)
+		end
+		
+		local respawntimer = _TimerService:SetTimerOnce(respawnfunction,self.respawntime)
+		if respawntimer == 0 then
+			return -- 타이머 예약 실패할 경우(드뭄) 바로 리스폰 된 상태여야함.
+		end
+		
+		self:ColorAlphaTrigger(false)
+		self.Entity.TriggerComponent.CollisionGroup = CollisionGroups.Nothing
+	end
+
+	@ExecSpace("Client")
+	method void ColorAlphaTrigger(boolean respawn)
+		--타이머를 이용해 스프라이트의 컬러 알파 값을 0 또는 1로 선형적으로 바꿈.
+		
+		local timerid = nil
+		
+		if respawn then
+			local setalphafunction = function()
+				if self.Entity.SpriteRendererComponent.Color.a < 1 then
+					self.Entity.SpriteRendererComponent.Color.a += 0.01
+				end
+			end
+			
+			timerid = _TimerService:SetTimerRepeat(setalphafunction,0.01)	
+			if timerid == 0 then
+				self.Entity.SpriteRendererComponent.Color.a = 1
+				return
+			end
+		else
+			local setalphafunction = function()
+				if self.Entity.SpriteRendererComponent.Color.a  > 0 then
+					self.Entity.SpriteRendererComponent.Color.a -= 0.01
+				else
+					self.Entity.SpriteRendererComponent.Color.a = 0
+				end
+			end
+			
+			timerid = _TimerService:SetTimerRepeat(setalphafunction,0.01)
+			if timerid == 0 then
+				self.Entity.SpriteRendererComponent.Color.a = 0
+				return
+			end
+		end
+		
+		
+		local cancelCallBack = function()
+		    _TimerService:ClearTimer(timerid)
+		end
+		    
+		_TimerService:SetTimerOnce(cancelCallBack, 2)
+		
+	end
+
+end

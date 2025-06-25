@@ -1,0 +1,65 @@
+@Component
+script AIFollowAndWanderComponent extends AIComponent
+
+	property any root = nil
+
+	property boolean isStop = false
+
+	property table memory = {}
+
+	@ExecSpace("ServerOnly")
+	method void OnBeginPlay()
+		self.root = SelectorNode("root")
+		---@type SelectorNode
+		local root = self.root
+		
+		local followAndWander = SelectorNode("PlayerFollowAndWander")
+		--SelectorNode는 fail이 나면 다음 우측 노드로 넘어감.
+		--succ면 다시 처음부터 run은 그 노드에서 멈춤.
+		local node1 = self:CreateNode("PlayerFollow","newnode1")
+		local node2 = self:CreateNode("Wander","newnode2")
+		
+		followAndWander:AttachChild(node1)
+		followAndWander:AttachChild(node2)
+		
+		---@type Deco_IsStop
+		local decorator = self:CreateNode("Deco_IsStop","isStop")
+		decorator.child = followAndWander
+		
+		local stopNode = self:CreateNode("MoveStop","newnode3")
+		
+		root:AttachChild(decorator)
+		root:AttachChild(stopNode)
+		self:SetRootNode(root)
+	end
+
+	@ExecSpace("ServerOnly")
+	method void SetMemory(string key, any value)
+		self.memory[key] = value
+	end
+
+	@ExecSpace("ServerOnly")
+	method any GetMemory(string key)
+		return self.memory[key]
+	end
+
+	@EventSender("Self")
+	handler HandleStateChangeEvent(StateChangeEvent event)
+		--------------- Native Event Sender Info ----------------
+		-- Sender: StateComponent
+		-- Space: Server, Client
+		---------------------------------------------------------
+		
+		-- Parameters
+		-- local CurrentStateName = event.CurrentStateName
+		-- local PrevStateName = event.PrevStateName
+		---------------------------------------------------------
+		--log("statechange")
+		if event.CurrentStateName == "HIT2" or event.CurrentStateName == "DEAD2" then
+			self.isStop = true
+		elseif event.PrevStateName == "HIT2" or event.PrevStateName == "DEAD2" then
+		    self.isStop = false
+		end
+	end
+
+end

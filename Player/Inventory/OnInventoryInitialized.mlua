@@ -1,0 +1,10 @@
+@Event
+script OnInventoryInitialized extends EventType
+
+	property SyncTable<integer> SlotItemAmount
+
+	property SyncTable<integer> SlotItemIndex
+
+	property integer money_count = 0
+
+end

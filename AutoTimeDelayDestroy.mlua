@@ -1,0 +1,19 @@
+@Component
+script AutoTimeDelayDestroy extends Component
+
+	property number delete_Time = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnInitialize()
+		
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		self.delete_Time -= delta
+		if self.delete_Time < 0 then
+		    self.Entity:Destroy()
+		end
+	end
+
+end

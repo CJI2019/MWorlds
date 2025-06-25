@@ -1,0 +1,8 @@
+@Component
+script DataTest extends Component
+
+	method void OnBeginPlay()
+		
+	end
+
+end

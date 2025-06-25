@@ -1,0 +1,62 @@
+@Component
+script UIBarAnimation extends Component
+
+	property string materialId = ""
+
+	property EntityRef targetImage = nil
+
+	@ExecSpace("ClientOnly")
+	method void OnBeginPlay()
+		self._T.goal = 0.0
+		self._T.old = 0.0
+		self._T.curr = 0.0
+		self._T.require = 0.0
+		self._T.elapsed_Time = 0.0
+		self._T.isIncrease = false
+		self.Enable = false
+		 
+		self.materialId = self.targetImage.SpriteGUIRendererComponent.MaterialId
+	end
+
+	@ExecSpace("ClientOnly")
+	method void OnUpdate(number delta)
+		self._T.elapsed_Time += delta * 2
+		
+		local add = self._T.require * self._T.elapsed_Time
+		self._T.curr = self._T.old + add
+		
+		if self._T.isIncrease == true then
+			if self._T.curr >= self._T.goal then
+			    self._T.curr = self._T.goal
+				self.Enable = false
+			end
+		else
+			if self._T.curr <= self._T.goal then
+				self._T.curr = self._T.goal
+				self.Enable = false
+			end
+		end
+		
+		--log("update = "..(1-self._T.curr))
+		local changeValue = {["ClippingRight"] = 1.0 - (self._T.curr);}
+		_MaterialService:ChangeMaterialProperty(self.materialId,changeValue) 
+	end
+
+	method void SetValue(number value)
+		self._T.goal = value
+		self._T.old = self._T.curr
+		if self._T.goal == self._T.curr then
+			return
+		end
+		
+		if self._T.curr < self._T.goal then
+			self._T.isIncrease = true
+		else
+			self._T.isIncrease = false
+		end
+		self._T.require = self._T.goal - self._T.curr
+		self._T.elapsed_Time = 0.0
+		self.Enable = true
+	end
+
+end

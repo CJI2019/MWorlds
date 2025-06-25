@@ -1,0 +1,46 @@
+@Struct
+script SkillInfo
+
+	property string id = ""
+
+	property string skillRUID = ""
+
+	property string name = ""
+
+	property string type = ""
+
+	property number power = 0
+
+	property integer hitcount = 0
+
+	property number damageSkinDelay = 0
+
+	property number hitOffsetX = 0
+
+	property number hitOffsetY = 0
+
+	property string iconRUID = ""
+
+	property string soundRUID = ""
+
+	property string hitRUID = ""
+
+	property table weaponTypes = {}
+
+	property string coreActionName = ""
+
+	property string partsActionName = ""
+
+	property boolean attached = false
+
+	property number actionPlayRate = 0
+
+	property number hitDelay = 0
+
+	property number hitBoxSizeX = 0
+
+	property number hitBoxSizeY = 0
+
+	property integer rating = 0
+
+end

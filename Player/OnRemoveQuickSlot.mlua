@@ -1,0 +1,10 @@
+@Event
+script OnRemoveQuickSlot extends EventType
+
+	property integer item_Id = 0
+
+	property integer inventory_Index = 0
+
+	property string strKey_Code = ""
+
+end

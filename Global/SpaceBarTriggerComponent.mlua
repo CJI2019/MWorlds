@@ -1,0 +1,12 @@
+@Component
+script SpaceBarTriggerComponent extends Component
+
+	method void EnterTrigger()
+		
+	end
+
+	method void LeaveTrigger()
+		
+	end
+
+end

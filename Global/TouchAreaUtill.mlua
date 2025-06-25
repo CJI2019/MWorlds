@@ -1,0 +1,71 @@
+@Logic
+script TouchAreaUtill extends Logic
+
+	@ExecSpace("Server")
+	method void CreateLineRendererToTouchReceiveComponent(EntityRef targetEntity)
+		if Environment:IsPublishedPlay() == true then
+			return
+		end
+	
+		if targetEntity.TouchReceiveComponent == nil then
+			return
+		end
+	
+		if targetEntity.SpriteRendererComponent == nil then
+			return
+		end
+	
+		if targetEntity.LineRendererComponent ~= nil then
+			return
+		end
+	
+		local ruid = targetEntity.SpriteRendererComponent.SpriteRUID
+	
+		local maxWidth, maxHeight, maxPivotX, maxPivotY = self:GetSizeAndPivot(ruid)
+		local RectSize = Vector2(maxWidth, maxHeight) / 100
+		local Pivot = Vector2(maxPivotX, maxPivotY) / 100
+		--log("RectSize = "..RectSize.x..","..RectSize.y .." /  Pivot = "..Pivot.x..","..Pivot.y)
+		--서버에서 호출되는 함수임을 유의
+		local lineRenderer = targetEntity:AddComponent(LineRendererComponent)
+		lineRenderer = targetEntity.LineRendererComponent
+	
+		lineRenderer.Points:Clear()
+		lineRenderer.Loop = true
+	
+		lineRenderer.Points:Add(LinePoint(Vector2(RectSize.x - Pivot.x, 0 - Pivot.y), Color(255, 255, 255, 0.9), 0.5))
+		lineRenderer.Points:Add(LinePoint(Vector2(RectSize.x - Pivot.x, RectSize.y - Pivot.y), Color(255, 255, 255, 0.9), 0.5))
+		lineRenderer.Points:Add(LinePoint(Vector2(0 - Pivot.x, RectSize.y - Pivot.y), Color(255, 255, 255, 0.9), 0.5))
+		lineRenderer.Points:Add(LinePoint(Vector2(0 - Pivot.x, 0 - Pivot.y), Color(255, 255, 255, 0.9), 0.5))
+	end
+
+	method boolean IsAnimationClip(string ruid)
+		local type = _ResourceService:GetTypeAndWait(ruid)
+		if type == ResourceType.AnimationClip then
+			return true
+		else
+			return false
+		end
+	end
+
+	method any GetSizeAndPivot(string ruid)
+		local IsAnimation = self:IsAnimationClip(ruid)
+		local maxWidth, maxHeight, maxPivotX, maxPivotY
+		if IsAnimation then
+			local anim = _ResourceService:LoadAnimationClipAndWait(ruid)
+			local frame = anim.Frames[1]
+			maxWidth = frame.FrameSprite.Width
+			maxHeight = frame.FrameSprite.Height
+			maxPivotX = maxWidth * frame.FrameSprite.Pivot.x
+			maxPivotY = maxHeight * frame.FrameSprite.Pivot.y
+		else
+			local sprite = _ResourceService:LoadSpriteAndWait(ruid)
+			maxWidth = sprite.Width
+			maxHeight = sprite.Height
+			maxPivotX = sprite.PivotPixel.x
+			maxPivotY = sprite.PivotPixel.y
+		end
+	
+		return maxWidth, maxHeight, maxPivotX, maxPivotY
+	end
+
+end
