@@ -18,16 +18,16 @@ script DisplayComponent extends Component
 
 	@EventSender("Self")
 	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TriggerComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TriggerBodyEntity = event.TriggerBodyEntity
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
 		    local TriggerBodyEntity = event.TriggerBodyEntity
-		    ---------------------------------------------------------
+		    
 		
 		    if self:IsClient() then
 		        self:ToggleUI(true)
@@ -36,16 +36,16 @@ script DisplayComponent extends Component
 
 	@EventSender("Self")
 	handler HandleTriggerLeaveEvent(TriggerLeaveEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TriggerComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TriggerBodyEntity = event.TriggerBodyEntity
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
 		    local TriggerBodyEntity = event.TriggerBodyEntity
-		    ---------------------------------------------------------
+		    
 		
 		    if self:IsClient() then
 		        self:ToggleUI(false)

@@ -198,15 +198,15 @@ script ColliderVisualizer extends Component
 
 	@EventSender("Self")
 	handler HandleEntityEnabledInHierarchyChangedEvent(EntityEnabledInHierarchyChangedEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: MODEntity
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local EnabledInHierarchy = event.EnabledInHierarchy
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
 		if self.gizmoAnchor then
 			self.gizmoAnchor.Enable = EnabledInHierarchy	
 		end
@@ -215,15 +215,15 @@ script ColliderVisualizer extends Component
 
 	@EventSender("Self")
 	handler HandleEntityVisibleInHierarchyChangedEvent(EntityVisibleInHierarchyChangedEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: MODEntity
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local VisibleInHierarchy = event.VisibleInHierarchy
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
 		if self.gizmoAnchor then
 			self.gizmoAnchor.Visible = VisibleInHierarchy
 		end

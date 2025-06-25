@@ -28,14 +28,14 @@ script PlayerFollow extends BTNode
 				min_dis = dis
 				min_dis_user = cur_map_users[cnt]
 			end
-		    --log(my_pos)
+		    
 			cnt += 1
 		end
 		
 		local my_move = self.parent.MovementComponent
-		if min_dis ~= 10000 then -- 거리내에 플레이어가 존재하므로 그 플레이어를 따라감.
-		    --log("run")
-		    --log(min_dis_user.Name)
+		if min_dis ~= 10000 then 
+		    
+		    
 			local speed = my_move.InputSpeed
 			local dir = Vector2(min_dis_user.TransformComponent.WorldPosition.x 
 				- self.parent.TransformComponent.WorldPosition.x,0)
@@ -50,7 +50,7 @@ script PlayerFollow extends BTNode
 		else
 			my_move:Stop()
 			self.parent.StateComponent:ChangeState("IDLE")
-		    --log("fail")
+		    
 			return BehaviourTreeStatus.Failure
 		end
 	end

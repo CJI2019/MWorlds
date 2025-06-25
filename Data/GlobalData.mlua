@@ -18,12 +18,12 @@ script GlobalData extends Logic
 	property table enchantCostTable = {}
 
 	method void OnBeginPlay()
-		math.randomseed(os.time()) -- 현재 시간을 시드로 설정
+		math.randomseed(os.time()) 
 		
 		self:MonsterDataLoad()
 		self:ItemDataLoad()
 		self:SkillDataLoad()
-		self:EquipmentItemDataLoad() -- ItemDataLoad 이후 호출한다. 장비아이템의 ruid를 재사용할 것이기 때문 thumbnail:// 부분을 제외하고 저장해야함.
+		self:EquipmentItemDataLoad() 
 		self:MesoLevelDataLoad()
 		self:WeaponLevelAbilityDataLoad()
 		self:EnchantCostDataLoad()
@@ -33,13 +33,13 @@ script GlobalData extends Logic
 	method void MonsterDataLoad()
 		local monsterSet = _DataService:GetTable("MonsterDataTable")
 		
-		--self.monsterTable => name : data
+		
 		for i = 1 ,monsterSet:GetRowCount() do
 			local monster = monsterSet:GetRow(i)
 			local monsterInfo = MonsterInfo()
 			monsterInfo.name = monster:GetItem("name")
 			for _, item in ipairs(_UtilLogic:Split(monster:GetItem("items"),',')) do
-				--item => 5:100 (아이템번호:확률) => 노션에 적어둔 확률 계산식 보자.
+				
 				local split_item = _UtilLogic:Split(item,':')
 				monsterInfo.items[split_item[1]] = split_item[2]
 			end
@@ -53,11 +53,11 @@ script GlobalData extends Logic
 			self.monsterTable[monsterInfo.monsterId] = monsterInfo
 		end
 		
-		--for k,v in pairs(self.monsterTable) do
-		--    log(k.."=>"..type(k))
-		--    
-		--    log(v)
-		--end
+		
+		
+		
+		
+		
 		
 	end
 
@@ -83,7 +83,7 @@ script GlobalData extends Logic
 	method void ItemDataLoad()
 		local itemSet = _DataService:GetTable("ItemDataTable")
 		
-		--self.monsterTable => name : data
+		
 		for i = 1 ,itemSet:GetRowCount() do
 			local itemInfo = ItemInfo()
 			local itemRow = itemSet:GetRow(i)
@@ -93,7 +93,7 @@ script GlobalData extends Logic
 			itemInfo.buyprice = tonumber(itemRow:GetItem("buy"))
 			itemInfo.sellprice = tonumber(itemRow:GetItem("sell"))
 			itemInfo.description = itemRow:GetItem("desc")
-			itemInfo.shopItemId = -1 --상점NPC만 가지는 값
+			itemInfo.shopItemId = -1 
 			itemInfo.item_Id = itemRow:GetItem("ID")
 			itemInfo.isUse = tonumber(itemRow:GetItem("isUse"))
 			itemInfo.type = itemRow:GetItem("type")
@@ -179,7 +179,7 @@ script GlobalData extends Logic
 	method void EquipmentItemDataLoad()
 		local equipmentSet = _DataService:GetTable("EquipmentInfoTable")
 		
-		--self.monsterTable => name : data
+		
 		for i = 1 ,equipmentSet:GetRowCount() do
 			local equipment = EquipmentItemInfo()
 			local itemRow = equipmentSet:GetRow(i)
@@ -189,7 +189,7 @@ script GlobalData extends Logic
 			equipment.rating = tonumber(itemRow:GetItem("rating"))
 			equipment.power = tonumber(itemRow:GetItem("power"))
 			equipment.isTwoHand = tonumber(itemRow:GetItem("isTwoHand")) == 1 and true or false
-			--"thumbnail://"를 자른다.
+			
 			local tempRuid = self:GetItem(itemRow:GetItem("id")).ruid
 			equipment.ruid = string.sub(tempRuid,13)
 			equipment.partType = itemRow:GetItem("partType")
@@ -209,16 +209,16 @@ script GlobalData extends Logic
 	method void MesoLevelDataLoad()
 		local mesoLevelSet = _DataService:GetTable("MesoLevelTable")
 		
-		--self.monsterTable => name : data
-		---@type integer
+		
+		
 		local last = 1
 		for i = 1 ,mesoLevelSet:GetRowCount() do
 			local mesoLevel = mesoLevelSet:GetRow(i)
-			---@type integer
+			
 		    local level = tonumber(mesoLevel:GetItem("level"))
 			local min = tonumber(mesoLevel:GetItem("min"))
 			local max = tonumber(mesoLevel:GetItem("max"))
-			-- 해당하는 레벨에서 드랍되는 메소의 범위(min~max) 값을 저장
+			
 			for l = last, level do
 				self.mesoLevelTable[l] = { min,max }
 			end
@@ -251,16 +251,16 @@ script GlobalData extends Logic
 	method void WeaponLevelAbilityDataLoad()
 		local weaponLevelAbilitySet = _DataService:GetTable("WeaponLevelAbilityTable")
 		
-		---@type integer
+		
 		local last = 1
 		
 		for i = 1 ,weaponLevelAbilitySet:GetRowCount() do
 			local ability = weaponLevelAbilitySet:GetRow(i)
-			--rating,level,power,defense,critical,critical_Damage,skill_Damage,hp,sp
-			---@type integer
+			
+			
 		    local rating = tonumber(ability:GetItem("rating"))
 			local levelRange = _UtilLogic:Split(ability:GetItem("level"),"~")
-			---@type integer
+			
 			local minLevel = tonumber(levelRange[1])
 			local maxLevel = tonumber(levelRange[2])
 			local power = tonumber(ability:GetItem("power"))
@@ -298,7 +298,7 @@ script GlobalData extends Logic
 		local max_rating = 9
 		for i = 1 ,enchantCostSet:GetRowCount() do
 			local enchantCost = enchantCostSet:GetRow(i)
-			---@type integer
+			
 		    local itemLevel = tonumber(enchantCost:GetItem("level"))
 			local prob = tonumber(enchantCost:GetItem("probability"))
 			self.enchantCostTable[itemLevel] = {

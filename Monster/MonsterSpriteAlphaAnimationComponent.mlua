@@ -81,15 +81,15 @@ script MonsterSpriteAlphaAnimationComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleStateChangeEvent(StateChangeEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: StateComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local CurrentStateName = event.CurrentStateName
-		-- local PrevStateName = event.PrevStateName
-		---------------------------------------------------------
+		
+		
 		
 		if CurrentStateName == "DEAD2" then
 		    self:DeadAnimationStart()
@@ -98,15 +98,15 @@ script MonsterSpriteAlphaAnimationComponent extends Component
 
 	@EventSender("Self")
 	handler HandleEntityEnabledInHierarchyChangedEvent(EntityEnabledInHierarchyChangedEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: MODEntity
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local enabledInHierarchy = event.EnabledInHierarchy
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
 		
 		if enabledInHierarchy == true then
 			self._T.increaseAlpha = true

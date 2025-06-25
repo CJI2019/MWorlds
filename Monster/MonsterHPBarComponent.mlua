@@ -30,25 +30,25 @@ script MonsterHPBarComponent extends Component
 	method void OnBeginPlay()
 		local animationClip = _ResourceService:LoadAnimationClipAndWait(self.Entity.SpriteRendererComponent.SpriteRUID)
 		
-		-- 첫 번째 프레임의 스프라이트 정보 가져오기
+		
 		local firstFrameSprite = animationClip.Frames[1].FrameSprite
 		
-		-- 스프라이트의 픽셀 단위 높이, 너비, 픽셀당 유닛, 피봇 정보 가져오기
+		
 		local spriteHeightInPixels = firstFrameSprite.Height
 		local pixelPerUnit = firstFrameSprite.PixelPerUnit
-		local spritePivotNormalized = firstFrameSprite.Pivot -- (0.5, 0.5)가 중앙, (0.5, 0)이 하단 중앙 등
+		local spritePivotNormalized = firstFrameSprite.Pivot 
 		
-		-- 엔티티의 현재 스케일(크기) 정보 가져오기
+		
 		local entityScale = self.Entity.TransformComponent.Scale
 		
-		-- 스프라이트의 실제 월드 유닛 크기 계산 (엔티티 스케일 적용)
+		
 		local actualSpriteHeightInWorldUnits = (spriteHeightInPixels / pixelPerUnit) * entityScale.y
 		
-		-- 스프라이트의 피봇을 고려하여 엔티티 로컬 공간에서의 오프셋 계산
-		-- 스프라이트의 상단 중앙 위치를 기준
-		local localOffsetY = (1.1 - spritePivotNormalized.y) * actualSpriteHeightInWorldUnits -- 1.0은 스프라이트의 가장 상단을 의미
 		
-		-- 계산된 로컬 오프셋 (Vector3 형태)
+		
+		local localOffsetY = (1.1 - spritePivotNormalized.y) * actualSpriteHeightInWorldUnits 
+		
+		
 		local correctLocalPos = Vector3(0, localOffsetY, 0)
 		
 		self.frameEntity = _SpawnService:SpawnByModelId("model://a20cc05b-6c79-4c03-8129-0fc27db29125","hp_bar",correctLocalPos,self.Entity)

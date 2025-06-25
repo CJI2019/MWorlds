@@ -7,17 +7,17 @@ script ShopItemTouchDisplay extends Component
 
 	@EventSender("Self")
 	handler HandleUITouchEnterEvent(UITouchEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: UITouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local TouchId = event.TouchId
+		
+		
+		
+		
+		
+		
+		
 		local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
-		--log("Begin Touch")
+		
+		
 		local entity = self.Entity
 		_ItemUI:SetTargetEntity(entity)
 		
@@ -25,17 +25,17 @@ script ShopItemTouchDisplay extends Component
 
 	@EventSender("Self")
 	handler HandleUITouchExitEvent(UITouchExitEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: UITouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local TouchId = event.TouchId
-		-- local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
-		--log("Exit Touch")
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		if _ItemUI.TargetUIEntity == self.Entity then
 			_ItemUI:SetTargetEntity(nil)
 		end
@@ -43,15 +43,15 @@ script ShopItemTouchDisplay extends Component
 
 	@EventSender("Self")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ButtonComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		 local Entity = event.Entity
-		---------------------------------------------------------
-		--log(Entity.Name.."Click")
+		
+		
 		local InitClick = function()
 			self.click = 0
 		end
@@ -60,7 +60,7 @@ script ShopItemTouchDisplay extends Component
 		_TimerService:SetTimerOnce(InitClick,0.3)
 		
 		if self.click == 2 then
-			-- entity의 아이템 이름 필요.
+			
 			local yesnocomp = self.confirmUI.YesORNoBoxComponent
 			if yesnocomp then
 				yesnocomp:SetItemInfo(self.Entity.ItemDescriptor.itemInfo)

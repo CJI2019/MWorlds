@@ -17,14 +17,14 @@ script ButtonSelectSpriteChange extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ButtonComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		 local Entity = event.Entity
-		---------------------------------------------------------
+		
 		if _UIButtonClickManager.clickEntity ~= nil then
 			_UIButtonClickManager.clickEntity.ButtonSelectSpriteChange:SetDefault()
 		end

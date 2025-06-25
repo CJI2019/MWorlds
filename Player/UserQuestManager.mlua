@@ -80,7 +80,7 @@ script UserQuestManager extends Component
 		if self.condition_Dict[questId]["item"] ~= nil then
 			for _,item in pairs(self.condition_Dict[questId]["item"]) do
 				if item["complete"] > item["current"] then
-					-- 아이템은 유저가 버리거나 갯수를 변경할 수 있는 요소이다.
+					
 					if self.progress_Dict[questId] == 2 then
 						local event = OnQuestProgressModify()
 						event.questId = questId
@@ -125,7 +125,7 @@ script UserQuestManager extends Component
 			end
 		end
 		
-		-- 최종적으로 퀘스트조건 정보 nil 처리
+		
 		self.condition_Dict[questId] = nil
 	end
 
@@ -152,7 +152,7 @@ script UserQuestManager extends Component
 
 	@ExecSpace("Client")
 	method void ClientCompleteQuest(string questId)
-		--log("Clear")
+		
 		self:DeleteQuest(questId)
 		local complete = OnQuestComplete()
 		complete.questId = questId
@@ -161,13 +161,13 @@ script UserQuestManager extends Component
 
 	method QuestCondition GetQuestCondition(string questId)
 		if self.condition_Dict[questId] == nil then
-		    --log(questId.."is nil : "..self.progress_Dict[questId])
+		    
 			return nil
 		end
-		--self.condition_Dict[questId]["item"][item_Id] = {
-		--        complete = count,
-		--        current = 0
-		--    }
+		
+		
+		
+		
 		local condition = QuestCondition()
 		if self.condition_Dict[questId]["kill"] ~= nil then
 			for mob_Id,mob_Condition in pairs(self.condition_Dict[questId]["kill"]) do
@@ -256,12 +256,12 @@ script UserQuestManager extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnInventoryModified(OnInventoryModified event)
-		-- Parameters
+		
 		local itemIndex = event.itemIndex
-		--local invIndex_Table = event.invIndex_Table
-		--local itemCount_Table = event.itemCount_Table
+		
+		
 		local total_ItemCount = event.total_ItemCount
-		---------------------------------------------------------
+		
 		
 		if self.itemQuest_Dict[itemIndex] == nil then
 		    return
@@ -270,10 +270,10 @@ script UserQuestManager extends Component
 		for questId,_ in pairs(self.itemQuest_Dict[itemIndex]) do
 			self.condition_Dict[questId]["item"][itemIndex]["current"] = total_ItemCount
 			if self:IsComplete(questId) then
-				--log("완료")
-				--self.condition_Dict[questId] = nil
+				
+				
 			end
-			--log(questId.."퀘스트의 아이템을 획득 개수 : "..self.condition_Dict[questId]["item"][itemIndex]["current"])
+			
 		end
 		
 		self:SyncQuestConditionTimer(true)
@@ -282,9 +282,9 @@ script UserQuestManager extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnMonsterKill(OnMonsterKill event)
-		-- Parameters
+		
 		 local mobId = tonumber(event.mobId)
-		---------------------------------------------------------
+		
 		if self.killQuest_Dict[mobId] == nil then
 			return
 		end
@@ -297,8 +297,8 @@ script UserQuestManager extends Component
 			self.condition_Dict[questId]["kill"][mobId]["current"] += 1
 			
 			if self:IsComplete(questId) then
-				-- 테이블에 완료 퀘스트를 넣어두고 모든 퀘스트 처리 후 완료된 퀘스트 삭제
-				-- 여기선 퀘스트 완료 알림창을 띄우도록 이벤트 호출하는 역할만함.
+				
+				
 			end
 		    log(questId.."퀘스트의 몬스터를 사냥한 횟수 : "..self.condition_Dict[questId]["kill"][mobId]["current"])
 		end
@@ -317,9 +317,9 @@ script UserQuestManager extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnQuestComplete(OnQuestComplete event)
-		-- Parameters
+		
 		local questId = event.questId
-		---------------------------------------------------------
+		
 		if self.condition_Dict[questId] == nil then
 			return
 		end
@@ -336,20 +336,20 @@ script UserQuestManager extends Component
 
 	@EventSender("Self")
 	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
-		-- Parameters
+		
 		local questId = event.questId
 		local progress = event.progress
-		---------------------------------------------------------
+		
 		self:SetProgress(questId,progress)
 	end
 
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnInventoryItemRemoved(OnInventorySlotItemRemoved event)
-		-- Parameters
+		
 		local itemIndex = event.itemIndex
 		local inventoryIndex = event.inventoryIndex
-		---------------------------------------------------------
+		
 		if self.itemQuest_Dict[itemIndex] == nil then
 			return
 		end

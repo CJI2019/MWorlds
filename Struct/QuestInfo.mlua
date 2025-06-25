@@ -62,7 +62,7 @@ script QuestInfo
 		local cmdPadding = 2
 		local cmdPaddingNext = 3
 		if splitScript[cmdPadding] == 'path' then
-			self:QuestAcceptAndFinishNpcLoad(splitScript,cmdPaddingNext) -- splitScript 테이블의 인덱스
+			self:QuestAcceptAndFinishNpcLoad(splitScript,cmdPaddingNext) 
 		elseif splitScript[cmdPadding] == 'required' then
 			self:CreateRequiredQuestID(splitScript, cmdPaddingNext)
 		elseif splitScript[cmdPadding] == 'type' then
@@ -109,7 +109,7 @@ script QuestInfo
 	end
 
 	method boolean CheckNPCPathExists(string npcPath, boolean isStartPath)
-		-- isStartPath 가 false면 endNpc를 찾아야함.
+		
 		
 		if isStartPath then
 			for i = 1, #self.startNpcPathTable do
@@ -190,7 +190,7 @@ script QuestInfo
 
 	method void CreateReward(table splitScript, integer index)
 		local rewards = _UtilLogic:Split(splitScript[index],",")
-		-- [exp:10,item:3:5]
+		
 		
 		local i = 1
 		while i <= #rewards
@@ -207,13 +207,13 @@ script QuestInfo
 			i += 1
 		end
 		
-		--for key,value in pairs(self.questReward["item"]) do
-		--    log(key..":"..value)
-		--end
+		
+		
+		
 	end
 
 	method void CreateCondition(table splitScript, integer index)
-		--\ condition kill:1:2,item:5:2
+		
 		local conditionTable = _UtilLogic:Split(splitScript[index],',')
 		
 		for i,condition in ipairs(conditionTable) do

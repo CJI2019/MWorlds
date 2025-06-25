@@ -9,7 +9,7 @@ script Wander extends BTNode
 
 	method void OnInit()
 		self.parent = self.ParentAI.Entity
-		self.time = math.random() * 2 -- 0~ 2초
+		self.time = math.random() * 2 
 		self.dir = math.random(2)
 	end
 

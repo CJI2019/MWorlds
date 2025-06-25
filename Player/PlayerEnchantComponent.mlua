@@ -26,7 +26,7 @@ script PlayerEnchantComponent extends Component
 			return
 		end
 		
-		---@type EquipmentItemStruct
+		
 		local equipment_Struct = item_Struct
 		local equipmentInfo = _GlobalData:GetEquipmentItem(equipment_Struct.itemId)
 		if equipmentInfo == nil then
@@ -44,20 +44,20 @@ script PlayerEnchantComponent extends Component
 		
 		playerInventory:ModifyMoney(-cost)
 		
-		-- equipment_Struct.level에 따른 강화 확률
+		
 		local successProbability = _GlobalData:GetEnchantProbability(equipment_Struct.level)
 		if successProbability == nil or successProbability < 0 or successProbability > 100 then
 			return
 		end
 		local result = math.random() * 100
-		--log("성공확률 : "..successProbability.." 결과 : "..result)
+		
 		local resultEvent = OnEnchantResult()
 		
 		if result <= successProbability then
 			resultEvent.result = 1
 			
 			equipment_Struct.level += 1
-			--log(equipment_Struct.level.."레벨로 상승했습니다.")
+			
 			
 			local event = SyncItemAbilityData()
 			table.insert(event.inventoryIndex_Table,inventoryIndex)
@@ -105,15 +105,15 @@ script PlayerEnchantComponent extends Component
 		        f += 1
 		    end
 		end
-		--log("성공 : "..s.." 실패 : "..f)
+		
 	end
 
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnEnchantResult(OnEnchantResult event)
-		-- Parameters
+		
 		local result = event.result
-		---------------------------------------------------------
+		
 		if result == "s" then
 		    _EffectService:PlayEffectAttached("21e2cab26eb3484facebfda3b6a631e9",self.Entity,Vector3(0.0,0.8,0.0),0.0,Vector3.one,false,{PlayRate = 1.5})
 		elseif result == "f" then

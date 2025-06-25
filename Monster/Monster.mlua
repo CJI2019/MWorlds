@@ -44,7 +44,7 @@ script Monster extends Component
 			end
 			
 		    state:AddCondition("HIT2","MOVE")
-		    --state:AddState("HIT_PUSH", KnockbackState)
+		    
 		end
 		
 		self._T.Knockback = -1
@@ -60,15 +60,15 @@ script Monster extends Component
 	method void Dead()
 		local event = OnMonsterDead()
 		event.monster = self.Entity
-		self.Entity:SendEvent(event) -- 몬스터 매니저에게 알릴 수 있도록함.
+		self.Entity:SendEvent(event) 
 		
 		self.IsDead = true
 		local stateComponent = self.Entity.StateComponent
 		if stateComponent then
 		    stateComponent:ChangeState("DEAD2")
-		    --self.Entity.MonsterDeadAnimationComponent:Activate()
-		    --self.Entity.AIFollowAndWanderComponent:ChangeDummyRoot()
-		    --log("monster change state to DEAD")
+		    
+		    
+		    
 		end
 		
 		self.Entity.SoundTableComponent:PlayDead()
@@ -77,22 +77,22 @@ script Monster extends Component
 		
 		local dropTable = {}
 		for key, value in pairs(monsterInfo.items) do
-		    local probability = tonumber(value)  -- 확률을 숫자로 변환
-		    local roll = math.random() * 100  -- 0~100 사이의 랜덤 값 생성    
+		    local probability = tonumber(value)  
+		    local roll = math.random() * 100  
 		    if roll <= probability then
-		        table.insert(dropTable, tonumber(key))  -- 확률이 범위 내에 있으면 아이템 추가
+		        table.insert(dropTable, tonumber(key))  
 		    end
 		end
 		
 		local pos = self.Entity.TransformComponent.WorldPosition:Clone()
 		pos.y += 1
 		local offset = 0.12
-		pos.x -= (#dropTable+1) * offset -- 메소 포함 개수
+		pos.x -= (#dropTable+1) * offset 
 		for i,itemId in ipairs(dropTable) do
 			pos.x += offset
-			-- Model_Item의 Entry ID를 복사하여 "Entry ID" 부분에 붙여 넣기
+			
 			local itemEntity = _SpawnService:SpawnByModelId("model://maplestoryitem$0039bd125ebb4666a5e6fb27842cfdc7",
-			     "Item",self.Entity.TransformComponent.WorldPosition ,self.Entity.Parent ) -- self.Entity.Parent
+			     "Item",self.Entity.TransformComponent.WorldPosition ,self.Entity.Parent ) 
 			itemEntity.DropItemComponent:InitItem(itemId)
 			itemEntity.DropItemComponent:SetGoalXpos(pos.x)
 		end
@@ -101,7 +101,7 @@ script Monster extends Component
 		local moneyEntity = _SpawnService:SpawnByModelId("model://maplestoryitem$0039bd125ebb4666a5e6fb27842cfdc7",
 		     "Item", self.Entity.TransformComponent.WorldPosition, self.Entity.Parent)
 		
-		---@type MonsterInfo
+		
 		local monster_Info = self.monster_Info
 		local mesoAmount = _GlobalData:GetRandomMeso(monster_Info.level)
 		local spriteType = _GlobalData:GetMesoSpriteType(mesoAmount,1)
@@ -124,7 +124,7 @@ script Monster extends Component
 		self.Entity.HitComponent.CollisionGroup = self.CollisionGroup
 		
 		
-		---@type MonsterInfo
+		
 		local monster_Info = self.monster_Info
 		self.Hp = monster_Info.maxHp
 		local stateComponent = self.Entity.StateComponent
@@ -136,11 +136,11 @@ script Monster extends Component
 
 	@ExecSpace("ServerOnly")
 	method void OnUpdate(number delta)
-		--if not _WorldRule:IsUpdate(self.Entity) then
-		--    return
-		--end
-		--log(self.Entity.TransformComponent.WorldPosition)
-		--log(self.Entity.Name)
+		
+		
+		
+		
+		
 		self:KnockbackUpdate(delta)
 	end
 
@@ -150,17 +150,17 @@ script Monster extends Component
 	end
 
 	method void KnockbackUpdate(number delta)
-		-- 항상 몬스터의 foothold를 추적하여 변수로 저장함.
-		-- foothold의 GetYByX로 그 x 좌표의 y값을 얻어옴.
+		
+		
 		if self._T.Knockback >= 0 then
-			if self._T.Knockback > 0.2 then -- hit 이미지 표현 강조
+			if self._T.Knockback > 0.2 then 
 			    local movement = self.Entity.MovementComponent
 			    if movement ~= nil then
 			        local dir = Vector2(1.5 * delta * self._T.HitDir,0)
 			        local next_x = self.Entity.TransformComponent.WorldPosition.x + dir.x
 			        local next_y = self.Entity.TransformComponent.WorldPosition.y
-			        --log(self._T.curfoothold:GetYByX(next_x))
-			        --log(self._T.curfoothold.Id)
+			        
+			        
 			        local next_foothold = self.Entity.CurrentMap.FootholdComponent:GetNearestFootholdByPoint(Vector2(next_x,next_y),0.3)
 			        if next_foothold ~= nil then
 			            movement:SetWorldPosition(Vector2(next_x,next_foothold:GetYByX(next_x)))
@@ -186,7 +186,7 @@ script Monster extends Component
 
 	@ExecSpace("Client")
 	method void ClientHitEvent()
-		---@type MonsterInfo
+		
 		local monster_Info = self.monster_Info
 		self.Entity.MonsterNameTagComponent:SetActive(true)
 		self.Entity.MonsterHPBarComponent:SyncHP(self.Hp / monster_Info.maxHp)
@@ -198,7 +198,7 @@ script Monster extends Component
 	end
 
 	method integer GetLevel()
-		---@type MonsterInfo
+		
 		local monster_Info = self.monster_Info
 		return monster_Info.level
 	end
@@ -206,29 +206,29 @@ script Monster extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleFootholdEnterEvent(FootholdEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: RigidbodyComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local Foothold = event.Foothold
-		---------------------------------------------------------
-		--log(event.Foothold.Id)
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		self._T.curfoothold = event.Foothold
 	end
 
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleMyAttackEvent(MyAttackEvent event)
-		-- Parameters
+		
 		local attacker = event.attacker
 		local skillId = event.skillId
 		
-		-- Component of attacker
+		
 		local attackerAbility = attacker.AbilityComponent
-		---------------------------------------------------------
+		
 		local skill_Info = _GlobalData:GetSkillInfo(skillId)
 		
 		local damages = {}
@@ -245,7 +245,7 @@ script Monster extends Component
 			damages,	DamageSkinTweenType.Default, criticals)
 		_EffectService:PlayEffect(skill_Info.hitRUID, self.Entity, self.Entity.TransformComponent.Position, 0, Vector3.one, false, {PlayRate = 1 })
 		
-		---@type MonsterInfo
+		
 		local monster_Info = self.monster_Info
 		self:ClientHitEvent(attacker.PlayerComponent.UserId)
 		self.Entity.SoundTableComponent:PlayHit()
@@ -260,7 +260,7 @@ script Monster extends Component
 		
 			self._T.HitDir = -1
 			if attacker.TransformComponent.WorldPosition.x < self.Entity.TransformComponent.WorldPosition.x then
-				self._T.HitDir = 1 -- 어느 방향으로 타격했는가.
+				self._T.HitDir = 1 
 			end
 		
 		    return	

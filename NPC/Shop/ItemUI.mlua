@@ -11,16 +11,16 @@ script ItemUI extends Logic
 		self.TargetUIEntity = entity
 		local TargetInfoUpdateComponent = self.ItemInfoEntity.TargetInfoUpdateComponent
 		if entity ~= nil then
-		    --log(entity.Name)
+		    
 			if TargetInfoUpdateComponent then
 				TargetInfoUpdateComponent:SetTarget(self.TargetUIEntity)
 				self:FrontOrderGroup()
-		        --self.ItemInfoEntity:SetEnable(true)
+		        
 			end
 		else
 			if TargetInfoUpdateComponent then
 				TargetInfoUpdateComponent:SetTarget(self.TargetUIEntity)
-		        --self.ItemInfoEntity:SetEnable(false)
+		        
 			end
 		end
 	end

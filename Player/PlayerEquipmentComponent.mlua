@@ -14,14 +14,14 @@ script PlayerEquipmentComponent extends Component
 	end
 
 	method void EquipItem(EquipmentItemStruct item)
-		--<item.type> <--- 아이템을 얻을 때 생성되는 값
-		--무 속성 : 1 
-		--얼음 속성 : 2
-		--화염 속성 : 3
-		--번개 속성 : 4
-		--바람 속성 : 5
-		--어둠 속성 : 6
-		--빛 속성  : 7
+		
+		
+		
+		
+		
+		
+		
+		
 		local equipment = _GlobalData:GetEquipmentItem(item.itemId)
 		
 		self.equipTable[equipment.partType] = item
@@ -42,7 +42,7 @@ script PlayerEquipmentComponent extends Component
 			return false
 		end
 		
-		---@type EquipmentItemStruct
+		
 		local equipItem = self.equipTable[equipmentInfo.partType]
 		
 		if equipItem == nil then
@@ -50,16 +50,16 @@ script PlayerEquipmentComponent extends Component
 		end
 		
 		if equipItem.inventoryIndex == item.inventoryIndex then
-			return true --같은 아이템을 장착하고 있음.
+			return true 
 		end
 		
 		return false
 	end
 
 	method void UnEquipItem(string part, boolean isChange)
-		-- 장착된 아이템을 해제하는 함수이다.
-		-- self.equipTable[part] 를 해제한다.
-		---@type EquipmentItemStruct
+		
+		
+		
 		local equipPart = self.equipTable[part]
 		if equipPart == nil then
 			return
@@ -71,7 +71,7 @@ script PlayerEquipmentComponent extends Component
 		event.willEquip = false
 		event.part = part
 		
-		-- 다른 아이템을 낀 상태에서 교체할경우 true < = > 교체가 필요없고 장착만 하는 경우 false
+		
 		event.isChange = isChange 
 		self.Entity.PlayerInventory:SendEquipItemEvent(event)
 		self.Entity.WeaponComponent:SetWeapon(nil)
@@ -114,12 +114,12 @@ script PlayerEquipmentComponent extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnEquipItem(OnEquipItem event)
-		-- Parameters
+		
 		local inventoryIndex = event.inventoryIndex
 		local itemId = event.itemId
 		local willEquip = event.willEquip
-		---------------------------------------------------------
-		-- 인벤토리 아이템의 정보를 가져와야한다.
+		
+		
 		
 		local costumeManager = self.Entity.CostumeManagerComponent
 		if costumeManager == nil then
@@ -149,18 +149,18 @@ script PlayerEquipmentComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleOnInventorySlotChange(OnInventorySlotChange event)
-		-- Parameters
+		
 		local slotA_Inventory_Index = event.slotA_Inventory_Index
 		local slotB_Inventory_Index = event.slotB_Inventory_Index
-		---------------------------------------------------------
 		
-		---@type EquipmentItemStruct
+		
+		
 		local partA_Item_Struct = nil
-		---@type EquipmentItemStruct
+		
 		local partB_Item_Struct = nil
 		
 		for part,item in pairs(self.equipTable) do
-			---@type EquipmentItemStruct
+			
 			local equipItem = item
 			if equipItem.inventoryIndex == slotA_Inventory_Index then
 				partA_Item_Struct = equipItem
@@ -169,7 +169,7 @@ script PlayerEquipmentComponent extends Component
 		end
 		
 		for part,item in pairs(self.equipTable) do
-			---@type EquipmentItemStruct
+			
 			local equipItem = item
 			if equipItem.inventoryIndex == slotB_Inventory_Index then
 				partB_Item_Struct = equipItem

@@ -25,7 +25,7 @@ script EnchantComponent extends Component
 
 	@ExecSpace("ClientOnly")
 	method void OnBeginPlay()
-		--self:StartBarAction()
+		
 		self.btn_Enchant:ConnectEvent(ButtonClickEvent,self.StartEnchant)
 		self.btn_Enchant.ButtonComponent.Enable = false
 		
@@ -52,15 +52,15 @@ script EnchantComponent extends Component
 		self._T.enchantTimer = _TimerService:SetTimerOnce(timer,3)
 		
 		self.frame_Main.UIBarAction:StartAction()
-		--self.frame_Main.UIBarAction.Enable = true
+		
 	end
 
 	method void UpdateEnchantInfoText()
 		self:InitEnchantUI()
 		
-		---@type UIItemSlot
+		
 		local slot = self._T.curr_Slot
-		---@type EquipmentAbilityInfo
+		
 		local curr_Ability = slot.ability
 		local equipmentInfo = _GlobalData:GetEquipmentItem(slot.itemIndex)
 		local next_ability = _GlobalData:GetWeaponLevelAbility(equipmentInfo.rating,curr_Ability.level + 1)
@@ -147,9 +147,9 @@ script EnchantComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnEnchantResult(OnEnchantResult event)
-		-- Parameters
+		
 		local result = event.result
-		---------------------------------------------------------
+		
 		if result == 1 then
 			self.anim_Img_Success.ImageRUID = "0fd67a228e904fd188e6d44901d39ead"
 			self.anim_Img_Success.Enable = true
@@ -170,14 +170,14 @@ script EnchantComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Entity", "72197b58-45c1-4f44-8a51-c87dfed55cf6")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ButtonComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
 		if self.uiPickedItem.PickingItemComponent.pickedItem == nil then
 			return
 		end
@@ -201,21 +201,21 @@ script EnchantComponent extends Component
 		self.enchantTarget_InventoryIndex = slot.inventoryIndex
 		self.img_Equipment.ImageRUID = item_Info.ruid
 		self.img_Equipment.Enable = true
-		--self.item_Index = tonumber(item_Info.item_Id)
+		
 	end
 
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleEntityEnabledInHierarchyChangedEvent(EntityEnabledInHierarchyChangedEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: MODEntity
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local EnabledInHierarchy = event.EnabledInHierarchy
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
 		if EnabledInHierarchy == false then
 			self:InitEnchantUI()
 			self.img_Equipment.Enable = false
@@ -234,9 +234,9 @@ script EnchantComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnMoneyModified(OnMoneyModified event)
-		-- Parameters
+		
 		local money_value = event.money_value
-		---------------------------------------------------------
+		
 		self.myMoneyCount = money_value
 	end
 

@@ -2,15 +2,15 @@
 script HitPushState extends StateType
 
 	method void OnEnter()
-		--local spriteRenderer = self.ParentComponent.Entity.SpriteRendererComponent
-		--
-		--spriteRenderer.SpriteRUID = self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["hit"]--"dc932872543f4a02bf41e977ab79e5ad"
-		--log("hit")
-		--log(spriteRenderer.PlayRate)
-		--spriteRenderer.PlayRate = 0.5
-		--log(spriteRenderer.PlayRate)
-		--self.ParentComponent.Entity:SendEvent()
-		--log(self.ParentComponent.Entity.StateAnimationComponent.ActionSheet["move"])
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		log("HitPush")
 	end
 

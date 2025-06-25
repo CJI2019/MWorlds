@@ -4,7 +4,7 @@ script Deco_IsStop extends BTNode
 	property any child = nil
 
 	method any OnBehave(number delta)
-		---@type AIFollowAndWanderComponent
+		
 		local parentAI = self.ParentAI
 		
 		if parentAI.isStop then

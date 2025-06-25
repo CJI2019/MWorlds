@@ -21,15 +21,15 @@ script MonsterSpawn extends Component
 			self.SpawnLocation.Children[i].Visible = false
 		end
 		
-		--self:SpawnMonster()
+		
 	end
 
 	@ExecSpace("ServerOnly")
 	method void OnUpdate(number delta)
 		self.Time = self.Time + delta
-		--log("여기가 실행되?") -- 왜 다른 맵에 있는데도 스크립트가 실행되는가?
+		
 		if self.Time >= self.TimeLimit then
-		    --log(self.TimeLimit)
+		    
 		    self.Time = 0
 			self:SpawnMonster()
 		end
@@ -40,7 +40,7 @@ script MonsterSpawn extends Component
 		local parent = _EntityService:GetEntityByPath("/maps/map01")
 		
 		for i = 1, self.SpawnLocation.Children.Count do
-		    --log(self.SpawnLocation.Children[i].Name)
+		    
 		    if isvalid(self.MonsterArray[i]) then
 		        continue
 		    end

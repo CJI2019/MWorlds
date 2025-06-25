@@ -23,7 +23,7 @@ script UIAvatarPreviewComponent extends Component
 	method void AddUIScrollWeaponItem(number index, any row)
 		    local id = row:GetItem("dataID")
 		    local weaponRUID = row:GetItem("weaponRUID")
-		--log(weaponRUID)
+		
 		    local spawnPos = Vector3.zero
 		    spawnPos.y += index * -10
 		
@@ -73,7 +73,7 @@ script UIAvatarPreviewComponent extends Component
 
 	@ExecSpace("ClientOnly")
 	method void SetAvatarAnimation(string dataID, string weaponRUID, boolean is2handWeapon)
-		    --  Avatar weapon equip
+		    
 		    local costume = self.AvatarGUIRenderer.Entity.CostumeManagerComponent
 		    if costume ~=  nil then
 		
@@ -91,7 +91,7 @@ script UIAvatarPreviewComponent extends Component
 		
 		    end
 		
-		    -- Avatar animation
+		    
 		    local body = self.AvatarGUIRenderer:GetBodyEntity()
 		
 		    local names = _ActionNameLogic:GetActionNameDatas(dataID)

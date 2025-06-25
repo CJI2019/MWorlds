@@ -11,17 +11,17 @@ script ItemBoxComponent extends Component
 
 	@EventSender("Self")
 	handler HandleStateChangeEvent(StateChangeEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: StateComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local CurrentStateName = event.CurrentStateName
-		-- local PrevStateName = event.PrevStateName
-		---------------------------------------------------------
 		
-		    -- There's no BROKEN state on client side of StateComponent.
+		
+		
+		
+		
+		
+		
+		
+		
+		    
 		    if self:IsServer() then
 		    	if event.CurrentStateName == "HIT" then
 		    		self.Entity.StateComponent:ChangeState("BROKEN")
@@ -37,20 +37,20 @@ script ItemBoxComponent extends Component
 
 	@EventSender("Self")
 	handler HandleSpriteAnimPlayerEndFrameEvent(SpriteAnimPlayerEndFrameEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ClimbableSpriteRendererComponent
-		-- Space: Client
-		---------------------------------------------------------
-		-- Sender: SpriteRendererComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local FrameIndex = event.FrameIndex
-		-- local ReversePlaying = event.ReversePlaying
-		-- local TotalFrameCount = event.TotalFrameCount
-		-- local AnimPlayer = event.AnimPlayer
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		if event.TotalFrameCount > 1 then
 		    	self.Entity.SpriteRendererComponent.Color.a = 0 
 		end
@@ -58,10 +58,10 @@ script ItemBoxComponent extends Component
 
 	@EventSender("Self")
 	handler HandleMyAttackEvent(MyAttackEvent event)
-		-- Parameters
-		-- local attacker = event.attacker
-		-- local skillId = event.skillId
-		---------------------------------------------------------
+		
+		
+		
+		
 		self.Entity.StateComponent:ChangeState("HIT")
 	end
 

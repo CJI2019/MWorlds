@@ -16,14 +16,14 @@ script SoundTableComponent extends Component
 			hit = dataTable:GetItem("hit"),
 			dead = dataTable:GetItem("dead")
 		}
-		--self.sounds["hit"] = dataTable:GetItem("hit")
-		--self.sounds["dead"] = dataTable:GetItem("dead")
+		
+		
 	end
 
 	@ExecSpace("Client")
 	method void PlayHit()
 		_SoundService:PlaySound(self.Entity.SoundTableComponent.sounds["hit"],0.5)
-		--log("hitsound")
+		
 	end
 
 	@ExecSpace("Client")

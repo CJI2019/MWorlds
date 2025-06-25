@@ -33,7 +33,7 @@ script UIQuestHelperComponent extends Component
 			self.userQuestManager = _UserService.LocalPlayer.UserQuestManager
 		end
 		
-		---@type EntityRef
+		
 		local select_block = nil
 		for i,block in ipairs(self.helperList) do
 			if block.Enable == false then
@@ -44,14 +44,14 @@ script UIQuestHelperComponent extends Component
 		if select_block == nil then
 			return
 		end
-		self.help_Count += 1 -- 순서 유의 activeOrder nil 주의
+		self.help_Count += 1 
 		self.activeOrder[self.help_Count] = select_block
 		select_block.Enable = true
 		
-		---@type UIQuestHelperBlockComponent
+		
 		local helperBlock = select_block.UIQuestHelperBlockComponent
 		helperBlock:SetQuest(questId)
-		self:ServerSetHelperList() -- questId 할당 후 호출
+		self:ServerSetHelperList() 
 		
 		local condition = self.userQuestManager:GetQuestCondition(questId)
 		
@@ -72,10 +72,10 @@ script UIQuestHelperComponent extends Component
 		else
 			select_block.UITransformComponent.anchoredPosition.y = 0
 		end
-		--local a = "슬라임 : "
-		--local b = " / 2"
-		--
-		--self.txt_Condition.TextComponent.Text = a..self.help_Count..b
+		
+		
+		
+		
 	end
 
 	method void DeleteQuest(string questId)
@@ -117,7 +117,7 @@ script UIQuestHelperComponent extends Component
 	end
 
 	method void ServerSetHelperList()
-		local list = {} --순서가 보장되어야함.
+		local list = {} 
 		for i, block in ipairs(self.activeOrder) do
 			table.insert(list,block.UIQuestHelperBlockComponent.questId)
 		end
@@ -126,17 +126,17 @@ script UIQuestHelperComponent extends Component
 
 	@EventSender("LocalPlayer")
 	handler HandleOnQuestHelp(OnQuestHelp event)
-		-- Parameters
+		
 		 local questId = event.questId
-		---------------------------------------------------------
+		
 		self:AddQuest(questId)
 	end
 
 	@EventSender("LocalPlayer")
 	handler HandleOnQuestComplete(OnQuestComplete event)
-		-- Parameters
+		
 		 local questId = event.questId
-		---------------------------------------------------------
+		
 		self:DeleteQuest(questId)
 	end
 

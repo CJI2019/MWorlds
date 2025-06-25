@@ -17,7 +17,7 @@ script NPCShopComponent extends Component
 	method void OnBeginPlay()
 		self:ShopItemDataTableLoad()
 		
-		--self.confirmbutton:DisconnectEvent(ButtonClickEvent,buttonclickeventHandle)
+		
 		
 	end
 
@@ -57,9 +57,9 @@ script NPCShopComponent extends Component
 
 	@ExecSpace("ClientOnly")
 	method void OnMapEnter(Entity enteredMap)
-		--if self.clientLoad == true then
-		--    return
-		--end
+		
+		
+		
 		
 		local confirm = function(event)
 			log("플레이어가 "..event.name.."을 구매요청을 보냅니다.")
@@ -69,7 +69,7 @@ script NPCShopComponent extends Component
 			_UserService.LocalPlayer.PlayerInteractionComponent:ItemTradeLogic(itemInfo)
 		end
 		self._T.buttonclickeventHandle = self.confirmbutton:ConnectEvent(BuyItemEvent,confirm)
-		--log("Enter")
+		
 		self:ShopItemDataTableLoad()
 		self.clientLoad = true
 	end
@@ -82,7 +82,7 @@ script NPCShopComponent extends Component
 				"슬라임의 방울"
 			}
 			for shopItemId, name in ipairs(self.itemnamelist) do
-		        --log(index, value)	
+		        
 				local itemelement = shopdataset:FindRow("name",name)
 				if itemelement == nil then
 					log(name.." is not element")
@@ -108,21 +108,21 @@ script NPCShopComponent extends Component
 	@ExecSpace("ClientOnly")
 	method void OnMapLeave(Entity leftMap)
 		self.confirmbutton:DisconnectEvent(BuyItemEvent,self._T.buttonclickeventHandle)
-		--log("leave")
+		
 	end
 
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleTouchEvent(TouchEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TouchId = event.TouchId
-		-- local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
+		
 		local InitClick = function()
 			self.click = 0
 		end

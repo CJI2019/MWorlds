@@ -75,14 +75,14 @@ script UIController extends Logic
 	@ExecSpace("ClientOnly")
 	@EventSender("Service", "InputService")
 	handler HandleKeyDownEvent(KeyDownEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: InputService
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local key = event.key
-		---------------------------------------------------------
+		
 		self:KeyFunction(key)
 	end
 

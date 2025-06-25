@@ -30,24 +30,24 @@ script PlayerAttack extends AttackComponent
 		        local attackOffset = Vector2(
 					worldPosition.x + skill_Info.hitOffsetX * playerController.LookDirectionX,
 					worldPosition.y + skill_Info.hitOffsetY)
-				---@type BoxShape
+				
 				local shape = self.Shape
 			    shape.Position = attackOffset
 		        shape.Size = Vector2(skill_Info.hitBoxSizeX,skill_Info.hitBoxSizeY)
 			    
 			    if self.Entity.CollisionBoxRendererComponent.Enable then
-		            --self:SpawnColliderEntity(attackOffset,shape.Size)
+		            
 			    end
 				
 				local entity_collision_simulator = _CollisionService:GetSimulator(self.Entity)
 				local other_component = entity_collision_simulator:Overlap(CollisionGroups.Monster,shape)
-			    --if other_component ~= nil then
-			    --    log(other_component.Entity.Name)
-			    --end
+			    
+			    
+			    
 				if other_component ~= nil and other_component.Entity.StateComponent.CurrentStateName ~= "DEAD" then
 					
-		            --local damage = self:CalcDamage(self.Entity,other_component.Entity,nil)
-		            --local critical = self:CalcCritical(self.Entity,other_component.Entity,nil)
+		            
+		            
 					local event = MyAttackEvent()
 					event.attacker = self.Entity
 					event.skillId = skill_Info.id
@@ -74,14 +74,14 @@ script PlayerAttack extends AttackComponent
 	@ExecSpace("Client")
 	method void SpawnColliderEntity(Vector2 attackOffset, Vector2 Size)
 		local collision_entity = _SpawnService:SpawnByModelId(
-						"model://maplestorytrap$0c7064fd887a47fcb2732ada78b29b79", -- PlayerNormalAttack_Entity
+						"model://maplestorytrap$0c7064fd887a47fcb2732ada78b29b79", 
 			    	    "PlayerNormalAttack",
 			    	    Vector3(0,0,0),
 		                _UserService.LocalPlayer.CurrentMap
 				)
 		collision_entity.TriggerComponent.ColliderOffset = attackOffset
 		collision_entity.TriggerComponent.BoxSize = Size
-		--log(attackOffset.x,",",attackOffset.y)
+		
 	end
 
 	@ExecSpace("Client")
@@ -110,7 +110,7 @@ script PlayerAttack extends AttackComponent
 			for i = 1,#others do
 				local other = others[i]
 				if other ~= nil and other.Entity.StateComponent.CurrentStateName ~= "DEAD" then
-		            --log(other.Entity.Name)
+		            
 					other.Entity.HitComponent:OnHit(self.Entity,99999,false,nil,1)
 				end
 			end
@@ -119,11 +119,11 @@ script PlayerAttack extends AttackComponent
 
 	@ExecSpace("Client")
 	method void ClientHit(ComponentRef other, number damage, boolean critical, integer count)
-		--for i = 1 , 100 do
-		--    wait(0.1)
-		--end
 		
-		--other.Entity.HitComponent:OnHit(self.Entity,damage,critical,nil,1)	
+		
+		
+		
+		
 		_DamageSkinService:Play(other.Entity, "3271c3e79bf04ecba9a107d55495970d", 0.1, {9999, 9999, 9999,9999,9999,9999,9999,9999,9999,9999,9999,9999}, DamageSkinTweenType.Default, true)
 	end
 
@@ -134,13 +134,13 @@ script PlayerAttack extends AttackComponent
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandlePlayerActionEvent(PlayerActionEvent event)
-		-- Parameters
+		
 		local ActionName = event.ActionName
-		-- local PlayerEntity = event.PlayerEntity
-		--------------------------------------------------------
+		
+		
 		if ActionName == "Attack" then
 		    self:CreateSkillAttack("1")
-		    --log("Attack")
+		    
 		end
 	end
 

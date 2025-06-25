@@ -6,24 +6,24 @@ script UIDead extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleDeadEvent(DeadEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: StateComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
+		
+		
+		
+		
 		self.Entity.Enable = true
 	end
 
 	@ExecSpace("ClientOnly")
 	@EventSender("Entity", "55e3877d-5bd8-42f1-9f0d-e2ae757b31d2")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ButtonComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
 		_UserService.LocalPlayer.PlayerComponent:ProcessRevive()
 		_UserService.LocalPlayer.PlayerComponent.Hp = math.ceil(_UserService.LocalPlayer.PlayerComponent.MaxHp / 10)
 		_UserService.LocalPlayer.PlayerControllerComponent.Enable = true

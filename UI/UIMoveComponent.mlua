@@ -40,7 +40,7 @@ script UIMoveComponent extends Component
 			self.Entity.UITransformComponent:Translate(dx*offx,dy*offy)
 			
 		end
-		--log(self.Entity.UITransformComponent.anchoredPosition.y)
+		
 	end
 
 end

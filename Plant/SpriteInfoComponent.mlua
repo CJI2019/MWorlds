@@ -12,21 +12,21 @@ script SpriteInfoComponent extends Component
 
 	@ExecSpace("ServerOnly")
 	method void OnBeginPlay()
-		-- 스프라이트 RUID를 저장하는 컴포넌트
+		
 		local RUID = self.Entity.SpriteRendererComponent.SpriteRUID
 		local sprite = _ResourceService:LoadSpriteAndWait(RUID)
 		
 		self.width = sprite.Width/ sprite.PixelPerUnit
 		self.height = sprite.Height/ sprite.PixelPerUnit
 		self.pivot = sprite.Pivot
-		--log("SpriteInfo")
+		
 	end
 
 	method Vector3 GetItemSpawnLocation()
 		local offsetY = self.height / 2
 		local spawn_location = self.Entity.TransformComponent.WorldPosition:Clone()
 		spawn_location.y -= offsetY
-		--log(self.height)
+		
 		
 		return spawn_location
 	end

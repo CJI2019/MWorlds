@@ -5,7 +5,7 @@ script ItemDescriptor extends Component
 
 	@ExecSpace("ClientOnly")
 	method void OnInitialize()
-		---@type ItemInfo
+		
 		self.itemInfo = ItemInfo()
 	end
 

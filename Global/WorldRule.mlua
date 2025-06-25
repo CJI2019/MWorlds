@@ -3,10 +3,10 @@ script WorldRule extends Logic
 
 	method boolean IsUpdate(EntityRef entity)
 		local users = _UserService:GetUsersByMapComponent(entity.CurrentMap.MapComponent)
-		    --log(#user_cnt)
+		    
 		if #users == 0 then
-		    --log(self.Entity.Name," - enable => false")
-		    --self.Entity.Enable = false
+		    
+		    
 			return false
 		end
 		return true

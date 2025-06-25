@@ -3,7 +3,7 @@ script ClearInventoryOnBeginPlay extends Component
 
 	@ExecSpace("ServerOnly")
 	method void OnBeginPlay()
-		-- 테스트용 인벤토리 초기화
+		
 		if self.Enable == false then
 		   	return
 		end

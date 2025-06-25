@@ -40,10 +40,10 @@ script AbilityComponent extends Component
 
 	@ExecSpace("ServerOnly")
 	method void OnBeginPlay()
-		--wait()
+		
 		self.maxExp = _LevelManager:BeiginPlayIsAvailableAndGetLevelExp(self.level)
 		self:SyncExpCheck(0,self.Entity.PlayerComponent.UserId)
-		--log("abilitycomponent")
+		
 		self._T.autoRestoreStaminaTimerHandle = _TimerService:SetTimerRepeat(self.AutoRestoreStamina,10)
 		
 		self._T.default_Defense = self.defense
@@ -81,7 +81,7 @@ script AbilityComponent extends Component
 			self.exp = self.exp - self.maxExp
 			self.level += 1
 			self.maxExp = _LevelManager:Get_LevelUp_Requirement(self.level)
-			-- LevelUpEvent SendEvent
+			
 			local event = OnLevelUp()
 			self:SendLevelUpEvent(event)
 		end
@@ -164,7 +164,7 @@ script AbilityComponent extends Component
 		local event = SystemMsgEvent()
 		event.msg = "+"..exp.." 경험치를 얻었습니다."
 		self.Entity:SendEvent(event)
-		--log("<Client> 얻은 Exp : "..exp)
+		
 	end
 
 	@ExecSpace("Multicast")
@@ -194,9 +194,9 @@ script AbilityComponent extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnMonsterKill(OnMonsterKill event)
-		-- Parameters
+		
 		 local mobId = event.mobId
-		---------------------------------------------------------
+		
 		local mob = _GlobalData:GetMonster(mobId)
 		if mob == nil then
 			return
@@ -209,7 +209,7 @@ script AbilityComponent extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleOnEquipItem(OnEquipItem event)
-		-- Parameters
+		
 		local inventoryIndex = event.inventoryIndex
 		local itemId = event.itemId
 		local willEquip = event.willEquip
@@ -217,17 +217,17 @@ script AbilityComponent extends Component
 		if willEquip == false then
 			self:InitAbility()
 		else 
-			---------------------------------------------------------
+			
 			local playerEquipment = self.Entity.PlayerEquipmentComponent
 			local playerInventory = self.Entity.PlayerInventory
 			
-			---@type EquipmentItemStruct
+			
 			local equipPart = playerEquipment.equipTable[part]
 			local equipment = _GlobalData:GetEquipmentItem(itemId)
-			--equipment.partType
+			
 			local rating = equipment.rating
 			
-			---@type EquipmentAbilityInfo
+			
 			local equipmentAbilityInfo = _GlobalData:GetWeaponLevelAbility(rating,equipPart.level)
 			log("이전 power = "..self.power)
 			self.power = self._T.default_Power + equipmentAbilityInfo.power

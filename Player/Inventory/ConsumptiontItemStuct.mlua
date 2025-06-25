@@ -2,7 +2,7 @@
 script ConsumptiontItemStuct extends ItemStruct
 
 	method boolean Use(EntityRef entity)
-		--__base:Use()
+		
 		local player = entity.PlayerComponent
 		if player and player:IsDead() then
 			return false

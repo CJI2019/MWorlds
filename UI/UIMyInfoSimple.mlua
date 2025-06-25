@@ -20,7 +20,7 @@ script UIMyInfoSimple extends Component
 		self._T.txt_Hp = _EntityService:GetEntityByPath(currentPath .. "/Bg_statinfo/HP_bar/txt_hp").TextComponent
 		
 		
-		--self.mySP = _EntityService:GetEntityByPath(currentPath .. "/Bg_statinfo/SP_bar").SliderComponent
+		
 		self.sp_Bar = _EntityService:GetEntityByPath(currentPath .. "/Bg_statinfo/SP_bar")
 		self._T.txt_Stamina = _EntityService:GetEntityByPath(currentPath .. "/Bg_statinfo/SP_bar/txt_sp").TextComponent
 		self.exp_Bar = _EntityService:GetEntityByPath(currentPath .. "/exp_bar")
@@ -36,7 +36,7 @@ script UIMyInfoSimple extends Component
 	method void SyncHP()
 		_TimerService:SetTimerOnce(function()
 			local maxHp = _UserService.LocalPlayer.PlayerComponent.MaxHp
-			---@type integer
+			
 			local hp = math.clamp(_UserService.LocalPlayer.PlayerComponent.Hp,0,maxHp)
 			self.hp_Bar.UIBarAnimation:SetValue(hp / maxHp)
 			self._T.txt_Hp.Text = string.format("%d / %d", hp,maxHp)	
@@ -48,7 +48,7 @@ script UIMyInfoSimple extends Component
 	method void SyncSP()
 		_TimerService:SetTimerOnce(function()
 			local maxSp = _UserService.LocalPlayer.AbilityComponent.maxSP
-			---@type integer
+			
 			local sp = math.clamp(_UserService.LocalPlayer.AbilityComponent.sp,0,maxSp)
 			self.sp_Bar.UIBarAnimation:SetValue(sp / maxSp)
 			self._T.txt_Stamina.Text = string.format("%d / %d", sp,maxSp)	
@@ -61,7 +61,7 @@ script UIMyInfoSimple extends Component
 			local exp = _UserService.LocalPlayer.AbilityComponent.exp
 			self._T.txt_Level.Text = _UserService.LocalPlayer.AbilityComponent.level
 			local maxExp = _UserService.LocalPlayer.AbilityComponent.maxExp
-		    --self.myEXP.Value = exp / maxExp
+		    
 			self.exp_Bar.UIExpBarAnimation:SetExp(exp / maxExp)
 			self._T.txt_Exp.Text = string.format("%d / %d", exp,maxExp)
 		end,0.05)

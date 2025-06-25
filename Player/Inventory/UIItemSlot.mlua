@@ -17,7 +17,7 @@ script UIItemSlot extends Component
 		if itemId == 0 then
 			return
 		end
-		-- 슬롯에 아이템 정보를 설정함
+		
 		self.itemIndex = itemId
 		local imageEntity = self.Entity:GetChildByName("img_slot")
 		local itemInfo = _GlobalData:GetItem(tostring(itemId))
@@ -35,21 +35,21 @@ script UIItemSlot extends Component
 			txt_Item.TextComponent.Text = "0"
 		end
 		
-		--print("itemCount",itemCount)
-		-- 아이템 개수가 0보다 클 경우 슬롯을 보여주고, 아닐 경우 숨김
+		
+		
 	end
 
 	method void SetCount(integer count)
-		 -- 아이템 수량 변경
+		 
 		
 		self.itemCount = count
 		if self._T.textEntity == nil then
-		-- path로 찾으려면 형제 계층에는 자신과 똑같은 이름을 가진 엔티티는 존재해서는 안됨.
+		
 			self._T.textEntity = self.Entity:GetChildByName("txt_itemcount")
 			self._T.img_shadow = self.Entity:GetChildByName("img_shadow")
 		end
 		self._T.textEntity.TextComponent.Text = tostring(count)
-		-- 아이템 개수가 0보다 클 경우 슬롯을 보여주고, 아닐 경우 숨김
+		
 		if count > 0 then
 			self._T.textEntity:SetEnable(true)
 			self._T.img_shadow:SetEnable(true)
@@ -65,9 +65,9 @@ script UIItemSlot extends Component
 	end
 
 	method void SetEquipTag(boolean isOn)
-		--log(self.inventoryIndex.."=> SetEquipTag is "..(isOn and "착용" or "해제"))
+		
 		if self.equipTag == nil then
-		    --log(self.inventoryIndex.."=> tag is nil")
+		    
 		end
 		self.equipTag.Visible = isOn
 	end
@@ -139,10 +139,10 @@ script UIItemSlot extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		-- Parameters
+		
 		local Entity = event.Entity
-		--------------------------------------------------------
-		--log(self.inventoryIndex)
+		
+		
 		local clickReset = function()
 			self._T.click = 0
 		end
@@ -161,16 +161,16 @@ script UIItemSlot extends Component
 
 	@EventSender("Self")
 	handler HandleUITouchEnterEvent(UITouchEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: UITouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local TouchId = event.TouchId
-		-- local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		if self.itemIndex ~= 0 then
 			_ItemUI:SetTargetEntity(self.Entity)
 		end
@@ -178,16 +178,16 @@ script UIItemSlot extends Component
 
 	@EventSender("Self")
 	handler HandleUITouchExitEvent(UITouchExitEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: UITouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local TouchId = event.TouchId
-		-- local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		_ItemUI:SetTargetEntity(nil)
 	end
 

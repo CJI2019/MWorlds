@@ -22,7 +22,7 @@ script NPCComponent extends Component
 		_TimerService:SetTimerOnce(InitClick,0.3)
 		
 		if self.click == 2 then
-		    --log("interaction")
+		    
 			self:Interaction()
 		end
 	end
@@ -30,16 +30,16 @@ script NPCComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleTouchEvent(TouchEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TouchReceiveComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TouchId = event.TouchId
-		-- local TouchPoint = event.TouchPoint
-		---------------------------------------------------------
-		--log("NPC터치")
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		self:TouchLogic(event)
 		

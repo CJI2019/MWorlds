@@ -13,7 +13,7 @@ script PlayerInteractionComponent extends Component
 		    return
 		end
 		
-		-- 요청이 비정상적으로 반복되어 보내지지는 않았는지 재사용 대기 시간을 추가해 검증
+		
 		if DateTime.UtcNow.Elapsed - self.lastExchangeTime < 1000 then
 		    log('지난 요청으로부터 1초가 지나지 않았습니다.')
 		    return

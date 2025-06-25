@@ -60,7 +60,7 @@ script UIQuestComponent extends Component
 		self:EventConnectQuestType()
 		
 		self.txt_emptyQuest = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questTitles/txt_emptyQuest")
-		-- text를 가진 버튼
+		
 		self.btn_title = _EntityService:GetEntityByPath(self.Entity.Path.."/frame/frame_questTitles/Scroll_Layout/btn_title")
 		self.btn_title.Enable = false
 		
@@ -104,11 +104,11 @@ script UIQuestComponent extends Component
 		
 		self._T.textCount = 0
 		self._T.textEntityTable = {self.txt_script}
-		for i = 2 ,32 do -- 예상하는 텍스트 엔티티의 개수를 32개로 설정한다. 색이 필요한 텍스트, 이미지, 개행 명령같은 경우에 텍스트가 만들어지고 그 수는 그다지 많지 않을 것.
+		for i = 2 ,32 do 
 			table.insert(self._T.textEntityTable,_SpawnService:SpawnByEntity(self.txt_script,"text"..i,Vector3.zero,self.frame_imgtxt))
 		end
 		self._T.spawnedTextEntitys = {}
-		--------------------------------------------------------------------------------------
+		
 		self.entityLoadComplete = true
 	end
 
@@ -132,14 +132,14 @@ script UIQuestComponent extends Component
 	end
 
 	method void ListingTitle(string group)
-		--log(group)
+		
 		
 		self.cur_Click_Group = group
 		local userQuestManager = self.localPlayer.UserQuestManager
-		-- 그룹에 맞는 퀘스트들을 가져와야함.
+		
 		local userQuest = userQuestManager:GetQuestGroups(group)
 		
-		-- userQuest = [questId,questId...]
+		
 		if self._T.btn_title_Table == nil then
 			self._T.btn_title_Table = {self.btn_title}	
 		else	
@@ -185,7 +185,7 @@ script UIQuestComponent extends Component
 	end
 
 	method void DetailQuest(string questId)
-		--log(questId)
+		
 		self.notice_selectQuest.Enable = false
 		
 		self.cur_Click_QuestId = questId
@@ -255,13 +255,13 @@ script UIQuestComponent extends Component
 				log("nil is "..char)
 				continue
 			end
-			-- \(백슬래시) 명령어 처리
+			
 			if char == '\\' or cmdCountStack == 1 then
 				cmdCountStack += 1
 				if cmdCountStack == 2 then
 					cmdCountStack = 0
 				end
-		        --self:CommandProcess(char)
+		        
 				if char == 'i' then
 		            TextBlockInit()
 		            local imageEntity = _SpawnService:SpawnByEntity(self.img_text,"img_text",Vector3.zero,self.img_text.Parent)
@@ -281,12 +281,12 @@ script UIQuestComponent extends Component
 		            imageEntity.UITransformComponent.anchoredPosition.y = dy
 					
 		            if isNewLine then
-			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) -- 이미지 포지션 + 이미지 사이즈
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) 
 					else
 			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,0)
 					end
 		
-					-- 개행이 일어나지 않아 남은 rect사이즈를 체크해야한다.
+					
 		            xOffSet = cur_textEntity.UITransformComponent.anchoredPosition.x
 		            yOffSet = math.abs((imageEntity.UITransformComponent.RectSize.y - cur_textEntity.UITransformComponent.RectSize.y))
 					
@@ -312,7 +312,7 @@ script UIQuestComponent extends Component
 				continue
 			end
 			if textRectSizeX + xOffSet > self.maxTextRectSize then
-				-- 텍스트 박스 가로 크기를 넘어서려고 하면 다음 단으로 넘겨야함.
+				
 				TextBlockInit()
 				SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
 				xOffSet = 0
@@ -337,9 +337,9 @@ script UIQuestComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnQuestComplete(OnQuestComplete event)
-		-- Parameters
-		-- local questId = event.questId
-		---------------------------------------------------------
+		
+		
+		
 		self:ListingTitle(self.cur_Click_Group)
 	end
 

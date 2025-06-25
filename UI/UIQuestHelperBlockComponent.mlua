@@ -22,10 +22,10 @@ script UIQuestHelperBlockComponent extends Component
 		self.txt_title = _EntityService:GetEntityByPath(self.Entity.Path.."/frame_title/txt_title")
 		self.txt_condition = _EntityService:GetEntityByPath(self.Entity.Path.."/txt_condition")
 		self.img_complete = _EntityService:GetEntityByPath(self.Entity.Path.."/img_complete")
-		-- self.type_Id_TextIndexDict
-		-- [item][item_Id] = text 접근 
 		
-		-- 닫기 버튼 눌렀을 때 사용할 용도
+		
+		
+		
 		self.root_helper = _EntityService:GetEntityByPath("/ui/PopupGroup/frame_helper")
 		self.btn_close = _EntityService:GetEntityByPath(self.Entity.Path.."/btn_close")
 		local btnClickFunc = function()
@@ -38,7 +38,7 @@ script UIQuestHelperBlockComponent extends Component
 	end
 
 	method void SetQuest(string questId)
-		--log(questId)
+		
 		self.questId = questId
 		self.txt_title.TextComponent.Text = _QuestManager:GetQuestTitle(questId)
 		self:ChangeBlockState(_UserService.LocalPlayer.UserQuestManager.progress_Dict[questId])
@@ -65,7 +65,7 @@ script UIQuestHelperBlockComponent extends Component
 		end
 		
 		if self.condition_Count > 1 then
-			-- 칸을 추가 할때마다 UI크기를 늘림. 조건 텍스트를 개행은 생각하지 않는다.
+			
 			self.Entity.UITransformComponent.RectSize.y += self._T.conditionTextTable[self.condition_Count].UITransformComponent.RectSize.y
 		end
 		
@@ -73,7 +73,7 @@ script UIQuestHelperBlockComponent extends Component
 		cur_conditionText.TextComponent.Text = str
 		cur_conditionText.Enable = true
 		
-		-- 몹,아이템 ID를 참조해서 어떤 텍스트를 조정할지 정한다. HelperBlock컴포넌트는 블럭 하나당 퀘스트 하나를 다룸.
+		
 		if self.type_Id_TextDict[type] == nil then
 			self.type_Id_TextDict[type] = {}
 		end
@@ -104,10 +104,10 @@ script UIQuestHelperBlockComponent extends Component
 
 	method void ChangeBlockState(integer progress)
 		if progress == 1 then
-		    --self.Entity.SpriteGUIRendererComponent.Color = Color(0,0,0,self.Entity.SpriteGUIRendererComponent.Color.a)
+		    
 			self.img_complete.Enable = false
 		elseif progress == 2 then
-		    --self.Entity.SpriteGUIRendererComponent.Color = Color(55,0,0,self.Entity.SpriteGUIRendererComponent.Color.a)
+		    
 			self.img_complete.Enable = true
 		end
 	end
@@ -121,7 +121,7 @@ script UIQuestHelperBlockComponent extends Component
 		
 		local condition = _UserService.LocalPlayer.UserQuestManager:GetQuestCondition(self.questId)
 		if condition == nil then
-			-- 알림창에서 퀘스트가 지워져야하는데 안지워짐
+			
 			return
 		end
 		
@@ -141,11 +141,11 @@ script UIQuestHelperBlockComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
-		-- Parameters
+		
 		local questId = event.questId
 		local progress = event.progress
 		local reason = event.reason
-		---------------------------------------------------------
+		
 		if reason == "accept" then
 			self.root_helper.UIQuestHelperComponent:AddQuest(questId)
 		end

@@ -35,17 +35,17 @@ script UIBarAction extends Component
 	end
 
 	method number Transform_Left(number x)
-		--return x / (30 / 3660)
+		
 		return x / (self._T.bar_Left / self._T.totalSize)
 	end
 
 	method number Transform_Center(number x)
-		--return (x - (30 / 3660)) / (3630 / 3660)
+		
 		return (x - (self._T.bar_Left / self._T.totalSize)) / ((self._T.totalSize - self._T.bar_Left ) / self._T.totalSize)
 	end
 
 	method number Transform_Right(number x)
-		--return (x - (3630 / 3660)) / (30 / 3660)
+		
 		return (x - ((self._T.totalSize - self._T.bar_Right ) / self._T.totalSize)) / (self._T.bar_Right / self._T.totalSize)
 	end
 

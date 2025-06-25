@@ -32,16 +32,16 @@ script AdminComponent extends Component
 
 	@EventSender("Entity", "7c0f8bb5-cf19-437c-9bb8-97e81f836dce")
 	handler HandleChatEvent(ChatEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ChatComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local Message = event.Message
-		-- local SenderName = event.SenderName
+		
 		local UserId = event.UserId
-		---------------------------------------------------------
+		
 		if UserId ~= "20372100000898043" then
 			log("not admin")
 			return

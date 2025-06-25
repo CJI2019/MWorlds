@@ -14,8 +14,8 @@ script UIShopInventory extends Component
 		closeButton:ConnectEvent(ButtonClickEvent, closeFunc)
 		
 		self._T.slotList = {}
-		self.itemUI:SetEnable(false) -- 첫 Slot은 더미이므로 활성x
-		--local shopdataset = _DataService:GetTable("ItemDataTable")
+		self.itemUI:SetEnable(false) 
+		
 		
 		for i = 1, 20 do
 		    local item_slot = self:AddSlot(i)
@@ -34,7 +34,7 @@ script UIShopInventory extends Component
 			if #self._T.slotList < shopItemId then
 				self._T.slotList[shopItemId] = self:AddSlot(shopItemId)
 			end
-			---@type EntityRef
+			
 			local item_slot = self._T.slotList[shopItemId]
 			local descriptor = item_slot.ItemDescriptor
 			if descriptor == nil then

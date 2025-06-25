@@ -37,7 +37,7 @@ script UIBarAnimation extends Component
 			end
 		end
 		
-		--log("update = "..(1-self._T.curr))
+		
 		local changeValue = {["ClippingRight"] = 1.0 - (self._T.curr);}
 		_MaterialService:ChangeMaterialProperty(self.materialId,changeValue) 
 	end

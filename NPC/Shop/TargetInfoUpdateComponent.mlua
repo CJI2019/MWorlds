@@ -31,14 +31,14 @@ script TargetInfoUpdateComponent extends Component
 		self.img_Skill_Icon = _EntityService:GetEntityByPath(self.frame_Skill_Info.Path.."/frame_Skill_Icon/img_icon").SpriteGUIRendererComponent
 		self.txt_Skill_Desc = _EntityService:GetEntityByPath(self.frame_Skill_Info.Path.."/frame_Skill_Desc/txt_Skill_Desc").TextComponent
 		
-		--스킬의 개수만큼 만들어 질 수 있음.
+		
 		self._T.frame_Skill_Table = {}
 		table.insert(self._T.frame_Skill_Table,{
 			frame = self.frame_Skill_Info,
 			icon = self.img_Skill_Icon,
 			txt = self.txt_Skill_Desc
 		})
-		-- frame , icon , txt 로 구성
+		
 		self._T.allwidth = 0
 		self._T.allheight = 0
 		self.targetEntity = nil
@@ -65,7 +65,7 @@ script TargetInfoUpdateComponent extends Component
 			self.image.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
 			self.desc.TextComponent.Text = itemInfo.description
 		else
-			-- itemDescriptor가 없다면 시도
+			
 			self:SetItemInfo()
 		end
 		
@@ -86,7 +86,7 @@ script TargetInfoUpdateComponent extends Component
 
 	method void TrackingMousePosition()
 		local cursorPos = _InputService:GetCursorPosition()
-		local ppix = 1920 / _UILogic.ScreenWidth -- 스크린 해상도는 변경 될 수 있음.
+		local ppix = 1920 / _UILogic.ScreenWidth 
 		local ppiy = 1080 / _UILogic.ScreenHeight
 		local uiXpos = ppix * cursorPos.x
 		local uiYpos = (ppiy * cursorPos.y)
@@ -131,7 +131,7 @@ script TargetInfoUpdateComponent extends Component
 		self._T.allheight = 0
 		
 		for _,frameDict in pairs(self._T.frame_Skill_Table) do
-			---@type EntityRef
+			
 			local frame = frameDict["frame"]
 			frame.Enable = false
 		end
@@ -157,24 +157,24 @@ script TargetInfoUpdateComponent extends Component
 		
 		local frameDict = self._T.frame_Skill_Table[i]
 		
-		---@type SpriteGUIRendererComponent
+		
 		local sprite = frameDict["icon"]
 		sprite.ImageRUID = skill.iconRUID
-		---@type TextComponent
+		
 		local text = frameDict["txt"]
 		text.Text = "공격력의 "..skill.power.."% 의 데미지로 공격합니다"
-		---@type EntityRef
+		
 		local frame = frameDict["frame"]
 		if i ~= 1 then
 			local prev_FrameDict = self._T.frame_Skill_Table[i-1]
-			---@type EntityRef
+			
 			local prev_frame = prev_FrameDict["frame"]
 			frame.UITransformComponent.anchoredPosition.y = prev_frame.UITransformComponent.anchoredPosition.y - prev_frame.UITransformComponent.RectSize.y
 		end
 		
 		frame.Enable = true
 		
-		if i == 1 then -- 스킬 정보를 1개라도 포함한다.
+		if i == 1 then 
 			self._T.allwidth += frame.UITransformComponent.RectSize.x
 		end
 	end
@@ -195,7 +195,7 @@ script TargetInfoUpdateComponent extends Component
 		self.name.TextComponent.Text = itemInfo.name
 		self.image.SpriteGUIRendererComponent.ImageRUID = itemInfo.ruid
 		 
-		---@type EquipmentAbilityInfo
+		
 		local ability = uiItemSlot.ability
 		
 		if ability == nil then

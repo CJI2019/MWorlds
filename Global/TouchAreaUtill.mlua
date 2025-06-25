@@ -24,8 +24,8 @@ script TouchAreaUtill extends Logic
 		local maxWidth, maxHeight, maxPivotX, maxPivotY = self:GetSizeAndPivot(ruid)
 		local RectSize = Vector2(maxWidth, maxHeight) / 100
 		local Pivot = Vector2(maxPivotX, maxPivotY) / 100
-		--log("RectSize = "..RectSize.x..","..RectSize.y .." /  Pivot = "..Pivot.x..","..Pivot.y)
-		--서버에서 호출되는 함수임을 유의
+		
+		
 		local lineRenderer = targetEntity:AddComponent(LineRendererComponent)
 		lineRenderer = targetEntity.LineRendererComponent
 	

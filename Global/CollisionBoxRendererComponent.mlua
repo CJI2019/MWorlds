@@ -6,29 +6,29 @@ script CollisionBoxRendererComponent extends LineRendererComponent
 	@ExecSpace("ClientOnly")
 	method void OnInitialize()
 		self.OrderInLayer = 1000
-		--local TC = self.Entity.TriggerComponent
-		--if TC then
-		--    local worldBoxPos = Vector2(
-		--        TC.ColliderOffset.x,
-		--        TC.ColliderOffset.y
-		--    )
-		--    local p1 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
-		--    local p2 = Vector2(worldBoxPos.x - (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
-		--    local p3 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y + (TC.BoxSize.y/2))
-		--    local p4 = Vector2(worldBoxPos.x + (TC.BoxSize.x/2),worldBoxPos.y - (TC.BoxSize.y/2))
-		--    
-		--    self.Points:Insert(1,LinePoint(p1,Color(255,0,0),0.2))
-		--    self.Points:Insert(2,LinePoint(p2,Color(255,0,0),0.2))
-		--    self.Points:Insert(3,LinePoint(p3,Color(255,0,0),0.2))
-		--    self.Points:Insert(4,LinePoint(p4,Color(255,0,0),0.2))
-		--    log("콜리전박스초기화 : ",self.Entity.Name)
-		--else
-		--    log("콜리전박스초기화 실패: ",self.Entity.Name)
-		--end
-		--
-		----local TC = self.Entity.TriggerComponent
-		--
-		--self.Loop = true
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 	end
 
 	@ExecSpace("ClientOnly")
@@ -48,7 +48,7 @@ script CollisionBoxRendererComponent extends LineRendererComponent
 		    self.Points:Insert(1,LinePoint(p2,Color(255,0,0),0.2))
 		    self.Points:Insert(1,LinePoint(p3,Color(255,0,0),0.2))
 		    self.Points:Insert(1,LinePoint(p4,Color(255,0,0),0.2))
-		    --log("트리거콜리전박스초기화 : ",self.Entity.Name)
+		    
 		end
 		
 		local HC = self.Entity.HitComponent
@@ -66,10 +66,10 @@ script CollisionBoxRendererComponent extends LineRendererComponent
 		    self.Points:Insert(1,LinePoint(p2,Color(0,255,0),0.2))
 		    self.Points:Insert(1,LinePoint(p3,Color(0,255,0),0.2))
 		    self.Points:Insert(1,LinePoint(p4,Color(0,255,0),0.2))
-		    --log("콜리전박스초기화 : ",self.Entity.Name)
+		    
 		end
 		
-		--local TC = self.Entity.TriggerComponent
+		
 		
 		self.Loop = true
 	end

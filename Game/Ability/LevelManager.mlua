@@ -10,12 +10,12 @@ script LevelManager extends Logic
 			local levelData = levelDataSet:GetRow(level)	
 			local exp 		= levelData:GetItem("exp")
 			
-			-- 0 ~ exp "까지" level의 exp 요구치
+			
 			self.levelTable[level] = tonumber(exp)
 		end
-		--wait(1)
+		
 		self._T.IsAvailable = true
-		--log("levelManager")
+		
 	end
 
 	method integer Get_LevelUp_Requirement(integer level)

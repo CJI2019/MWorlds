@@ -37,7 +37,7 @@ script DialogComponent extends Component
 
 	@ExecSpace("ClientOnly")
 	method void OnBeginPlay()
-		self.maxTextRectSize = 1150 -- 최대치는 1200이나 글자 크기에 의한 오차를 줄이기 위해 1150으로 설정
+		self.maxTextRectSize = 1150 
 		self._T.oldTotalTextRectSize = 0.0
 		self._T.spawnedTextEntitys = {}
 		self._T.isLastPage = false
@@ -77,7 +77,7 @@ script DialogComponent extends Component
 		end
 		self.completeButton:ConnectEvent(ButtonClickEvent,completeQuest)
 		
-		-- self:FontWidthCache(32)
+		
 		_CustomText:FontWidthCache(32)
 		
 		self._T.textCount = 1
@@ -108,7 +108,7 @@ script DialogComponent extends Component
 	end
 
 	method void DialogUISetting()
-		-- 명령어가 없는 기본 대화 세팅
+		
 		self.nextButton.Enable = true
 		self.prevButton.Enable = true
 		self.acceptButton.Enable = false
@@ -136,7 +136,7 @@ script DialogComponent extends Component
 		local questIdTable = availableQuestDict["questTable"]
 		
 		self.scroll_Quest.Enable = true
-		for i = #self.scroll_Quest.Children + 1 , questCount do -- 1개의 객체는 이미 존재함.
+		for i = #self.scroll_Quest.Children + 1 , questCount do 
 			_SpawnService:SpawnByEntity(self.questButton_Origin,"btn_quest"..i,Vector3.zero,self.scroll_Quest)
 		end
 		
@@ -162,7 +162,7 @@ script DialogComponent extends Component
 		self.questInfo = questNpc.myQuestInfos[questId]
 		self:DialogUISetting()
 		
-		-- 처음 스크립트 대화
+		
 		self.cur_ScriptNumber = self.questInfo:GetEntryPoint(questNpc:GetQuestIdProgress(questId),self.interactionNpc.Path)
 		self._T.curScript_firstPage = self.cur_ScriptNumber
 		self:SetPage(self.cur_ScriptNumber)
@@ -189,7 +189,7 @@ script DialogComponent extends Component
 		self.name.TextComponent.Text = self.questInfo.scripts[page]:GetItem("name")
 		self.image.SpriteGUIRendererComponent.ImageRUID = self.questInfo.scripts[page]:GetItem("npcimage")
 		
-		--버튼 활성화에 관계없이 명령어에 따라서 이 함수에서 Enable 함.
+		
 		self:WrapTextForUI(page)
 	end
 
@@ -275,7 +275,7 @@ script DialogComponent extends Component
 				log("nil is "..char)
 				continue
 			end
-			-- \(백슬래시) 명령어 처리
+			
 			if char == '\\' or cmdCountStack == 1 then
 				cmdCountStack += 1
 				if cmdCountStack == 2 then
@@ -285,8 +285,8 @@ script DialogComponent extends Component
 				if char == 'i' then
 		            TextBlockInit()
 		            local imageEntity = _SpawnService:SpawnByEntity(self.img_text,"img_text",Vector3.zero,self.textFrame)
-		            --imageEntity.Enable = true
-		            --imageEntity.Visible = true
+		            
+		            
 		            table.insert(self._T.spawnedTextEntitys,imageEntity)
 		            imageCount += 1
 					local dx = cur_textEntity.UITransformComponent.anchoredPosition.x + cur_textEntity.UITransformComponent.RectSize.x
@@ -303,12 +303,12 @@ script DialogComponent extends Component
 		            imageEntity.UITransformComponent.anchoredPosition.y = dy
 					
 		            if isNewLine then
-			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) -- 이미지 포지션 + 이미지 사이즈
+			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet) 
 					else
 			            SpawnNewText(imageEntity.UITransformComponent.anchoredPosition.x + imageRectSize.x,0)
 					end
 		
-					-- 개행이 일어나지 않아 남은 rect사이즈를 체크해야한다.
+					
 		            xOffSet = cur_textEntity.UITransformComponent.anchoredPosition.x
 		            yOffSet = 20
 					
@@ -335,7 +335,7 @@ script DialogComponent extends Component
 			end
 			
 			if textRectSizeX + xOffSet > self.maxTextRectSize then
-				-- 텍스트 박스 가로 크기를 넘어서려고 하면 다음 단으로 넘겨야함.
+				
 				TextBlockInit()
 				SpawnNewText(0,-cur_textEntity.UITransformComponent.RectSize.y - yOffSet)				
 				xOffSet = 0

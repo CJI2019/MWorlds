@@ -6,7 +6,7 @@ script Gathering extends Component
 	property Entity TargetEntity = nil
 
 	method void OnBeginPlay()
-		self.Entity.SliderComponent.Value = 1 -- UI는 클라이언트에서만 실행한다는 것에 유의.
+		self.Entity.SliderComponent.Value = 1 
 		self._T.time = 0
 	end
 
@@ -15,9 +15,9 @@ script Gathering extends Component
 		
 		if self.IsUpdate == true then
 			self.Entity.SliderComponent.Value -= delta *2
-		    --self:SetValue(self.Entity.SliderComponent.Value)
+		    
 			self._T.time +=delta
-		    --log(self._T.time)
+		    
 			if self.Entity.SliderComponent.Value == 0 then
 				self.IsUpdate = false
 				self.Entity:SetEnable(false)

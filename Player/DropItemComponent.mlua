@@ -72,8 +72,8 @@ script DropItemComponent extends Component
 
 	@ExecSpace("Server")
 	method void SyncPosition()
-		-- 서버에서 포지션을 옮겼음에도 맵을 이동했다가 재진입을 하게 되면 그 이동 포지션이 반영이 안되는 문제가 있음.
-		-- 그래서 맵을 재진입할때 BeginPlay가 호출되는 부분에서 포지션의 동기화를 한다.
+		
+		
 		
 		self.Entity.MovementComponent:SetWorldPosition(self.Entity.TransformComponent.WorldPosition:ToVector2())
 	end
@@ -135,7 +135,7 @@ script DropItemComponent extends Component
 
 	@ExecSpace("Client")
 	method void StopRotate()
-		---@type Tweener
+		
 		local tweenRotater = self._T.tweenRotater
 		if tweenRotater ~= nil then
 			tweenRotater:Destroy()
@@ -143,22 +143,22 @@ script DropItemComponent extends Component
 		end
 		self._T.tweenOn = true
 		
-		--local tweenPingpong = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.1), 1, EaseType.QuadEaseOut)
-		----tweenPingpong.LoopType = TweenLoopType.PingPong
-		----tweenPingpong.LoopCount = -1
-		--tweenPingpong:SetOnEndCallback(function()
-		--    local tweenPingpong2 = _TweenLogic:MoveOffset(self.Entity, Vector2(0,-0.1), 1, EaseType.QuadEaseOut)
-		--    self._T.tweenPingpong2 = tweenPingpong2
-		--end)
-		--self._T.tweenPingpong = tweenPingpong	
 		
-		--local tween = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.1), 2, EaseType.Linear)
-		--tween:SetOnEndCallback(function()
-		--    local tweenPingpong = _TweenLogic:MoveOffset(self.Entity, Vector2(0,0.05), 3, EaseType.QuadEaseOut)
-		--    tweenPingpong.LoopType = TweenLoopType.PingPong
-		--    tweenPingpong.LoopCount = -1
-		--    self._T.tweenPingpong = tweenPingpong	
-		--end)
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 	end
 
 	@ExecSpace("ClientOnly")
@@ -184,14 +184,14 @@ script DropItemComponent extends Component
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
-		-- Parameters
+		
 		local TriggerBodyEntity = event.TriggerBodyEntity
-		--------------------------------------------------------
-		--아이템 엔티티와 충돌한 엔티티의 인벤토리를 받고, 인벤토리가 없으면 리턴
+		
+		
 		local inventory = TriggerBodyEntity.PlayerInventory
-		--log(TriggerBodyEntity.Name)
+		
 		if inventory == nil then return end
-		-- 아이템 개수 변경 처리를 위해 ModifyItem() 함수 호출
+		
 		if self.isMoney then
 			local meso = self._T.moneyValue
 			inventory:ModifyMoney(meso)
@@ -205,22 +205,22 @@ script DropItemComponent extends Component
 			self:SendItemGetMsgEvent(self.itemIndex,TriggerBodyEntity.PlayerComponent.UserId)
 		end
 		
-		-- 충돌한 아이템 엔티티는 파괴
+		
 		self.Entity:Destroy()
 	end
 
 	@ExecSpace("ServerOnly")
 	@EventSender("Self")
 	handler HandleFootholdEnterEvent(FootholdEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: RigidbodyComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local Entity = event.Entity
-		-- local Foothold = event.Foothold
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		self.Entity.TriggerComponent.Enable = true
 		_TimerService:SetTimerOnce(function()

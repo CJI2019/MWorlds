@@ -18,48 +18,48 @@ script CustomText extends Logic
 		self.charWidthDict[fontSize] = {}
 		
 		local txt = _SpawnService:SpawnByModelId('model://uitext', 'txt', Vector3.zero,_EntityService:GetEntityByPath('/ui/DefaultGroup'))
-		--local txt = _SpawnService:SpawnByModelId('model://1f0484c9-46fd-4432-9ffa-c9a47dbd268b', 'txt', Vector3.zero,_EntityService:GetEntityByPath('/ui/DefaultGroup'))
+		
 		
 		local txtcomp = txt.TextComponent
 		txtcomp.FontSize = fontSize
 		local height = txtcomp:GetPreferredHeight(" ", 50)
 		self.textHeight[fontSize] = height
 		
-		for i = 0x20, 0xBF do -- 특수기호 너비 측정
+		for i = 0x20, 0xBF do 
 		    local width = txtcomp:GetPreferredWidth(utf8.char(i))
 		    self.charWidthDict[fontSize][utf8.char(i)] = width
-		    --log(i.." => "..utf8.char(i).." = "..width)
+		    
 		end
-		self.charWidthDict[fontSize][utf8.char(0x0A)] = 0 -- 줄바꿈문자 '\n'
+		self.charWidthDict[fontSize][utf8.char(0x0A)] = 0 
 		local hangul_width = txtcomp:GetPreferredWidth('가')
-		--local temp = {"ㄱ","갋","가","파","핡","영","밝"}
-		--for index, i in ipairs(temp) do
-		--    local width_hangul = txtcomp:GetPreferredWidth(i)
-		--    self.Width_Hangul = width_hangul
-		--    --log(i.." => "..width_hangul)
-		--end
+		
+		
+		
+		
+		
+		
 		txt:Destroy()
 		
-		local start_codepoint = 0xAC00 -- '가'
-		local end_codepoint = 0xD7A3   -- '힣'
+		local start_codepoint = 0xAC00 
+		local end_codepoint = 0xD7A3   
 		
 		for code = start_codepoint, end_codepoint do
 		    local char = utf8.char(code)
 			self.charWidthDict[fontSize][char] = hangul_width
 		end
-		-- 초성 0x1100 ~ 0x110F
+		
 		self:SetCharWidthInRange(fontSize,0x1100,0x110F,hangul_width)
-		-- 중성 0x1161 ~ 0x116F
+		
 		self:SetCharWidthInRange(fontSize,0x1161,0x116F,hangul_width)
-		-- 종성 0x11A8  ~ 0x11C2
+		
 		self:SetCharWidthInRange(fontSize,0x11A8,0x11C2,hangul_width)
 		
-		-- 단독 자음과 모음.
-		--log(utf8.codepoint('ㄱ'))-- 12593
-		--log(utf8.codepoint('ㅎ'))-- 12622
+		
+		
+		
 		self:SetCharWidthInRange(fontSize,12593,12622,hangul_width)
-		--print(utf8.codepoint('ㅏ'))  -- 12623
-		--print(utf8.codepoint('ㅣ'))  -- 12643
+		
+		
 		self:SetCharWidthInRange(fontSize,12623,12643,hangul_width)
 		
 		log("FontWidthCache Finish")
@@ -67,15 +67,15 @@ script CustomText extends Logic
 
 	method void SetCharWidthInRange(integer fontSize, integer start, integer ended, number size)
 		local start_codepoint = start
-		--log("start is ".. start)
+		
 		local end_codepoint = ended
-		--log("ended is ".. ended)
+		
 		
 		for code = start_codepoint, end_codepoint do
 		    local char = utf8.char(code)
 			self.charWidthDict[fontSize][char] = size
-		    --log(char)
-		    --log(self.charWidth[char])
+		    
+		    
 		end
 	end
 
@@ -84,7 +84,7 @@ script CustomText extends Logic
 	end
 
 	method integer SetImageText(table utf8_TextTable, EntityRef imageEntity, integer idx)
-		idx += 1 -- '<'
+		idx += 1 
 		local storedRuid = ""
 		while true
 		do
@@ -99,7 +99,7 @@ script CustomText extends Logic
 	end
 
 	method integer SetColorText(table utf8_TextTable, EntityRef entity, integer idx)
-		idx += 1 -- '<'
+		idx += 1 
 		local str = ""
 		while true
 		do

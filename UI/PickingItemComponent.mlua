@@ -51,10 +51,10 @@ script PickingItemComponent extends Component
 			self.Entity.Enable = true
 			self:FrontOrderGroup()
 		else
-			-- case 1 : 피킹한 아이템이 존재하는 상태로 똑같은 인벤토리 슬롯을 클릭 했을 때.
-			-- 아이템을 피킹을 멈춘다.
-			-- case 2 : 피킹한 아이템이 존재하는 상태로 다른 인벤토리 슬롯을 클릭 했을 때.
-			-- 아이템의 슬롯 위치를 바꾼다.
+			
+			
+			
+			
 			if	self.pickedItem ~= event.pickedEntity then
 				local slotA_Id = self.pickedItem.UIItemSlot.inventoryIndex
 				local slotB_Id = event.pickedEntity.UIItemSlot.inventoryIndex
@@ -73,19 +73,19 @@ script PickingItemComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("Service", "InputService")
 	handler HandleKeyDownEvent(KeyDownEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: InputService
-		-- Space: Client
-		---------------------------------------------------------
 		
-		-- Parameters
+		
+		
+		
+		
+		
 		local key = event.key
-		---------------------------------------------------------
+		
 		if KeyboardKey.Mouse0 == key and self.pickedItem ~= nil then
 			if _InputService:IsPointerOverUI() == true then
 				return
 			end
-		    --log("아이템을 놓았습니다.")
+		    
 			self:DeActivate()
 			
 		end

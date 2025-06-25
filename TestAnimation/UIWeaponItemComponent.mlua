@@ -13,7 +13,7 @@ script UIWeaponItemComponent extends Component
 	method void SetData(string dataID, string weaponRUID)
 		    self.DataID = dataID
 		    self.WeaponImage.ImageRUID = "thumbnail://"..weaponRUID
-		--log(self.WeaponImage.ImageRUID)
+		
 		    self.NameText.Text = tostring(self.DataID)
 	end
 
@@ -24,14 +24,14 @@ script UIWeaponItemComponent extends Component
 
 	@EventSender("Self")
 	handler HandleButtonClickEvent(ButtonClickEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: ButtonComponent
-		-- Space: Client
-		---------------------------------------------------------
 		
-		    -- Parameters
+		
+		
+		
+		
+		    
 		    local Entity = event.Entity
-		    ---------------------------------------------------------
+		    
 		    if Entity == self.Entity then
 		    	if self.AvatarPreviewRef ~= nil then	
 		    		self.AvatarPreviewRef:OnSelectButton(self, self.DataID)

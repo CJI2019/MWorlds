@@ -39,12 +39,12 @@ script UIQuestAlertComponent extends Component
 	end
 
 	method void Timer()
-		local T = 1  -- 주기 (초)
-		local max_X = self.goal_Xpos  -- x의 최대값
+		local T = 1  
+		local max_X = self.goal_Xpos  
 		local callFrequency = 0.01
-		-- 시간 t에 따른 x 값 계산 함수
+		
 		local anime = function()
-			-- 0.5~ 1.5 구간은 멈춰야함.
+			
 			self._T.deltaTime += callFrequency
 		    local normalized_t = self._T.deltaTime % T
 			if self._T.deltaTime >= 0.5 and self._T.deltaTime <= 1.5 then
@@ -73,10 +73,10 @@ script UIQuestAlertComponent extends Component
 
 	@EventSender("LocalPlayer")
 	handler HandleOnQuestProgressModify(OnQuestProgressModify event)
-		-- Parameters
+		
 		local questId = event.questId
 		local progress = event.progress
-		---------------------------------------------------------
+		
 		if progress == 2 then
 			table.insert(self.timerQueue,_QuestManager:GetQuestTitle(questId))
 			if #self.timerQueue == 1 then

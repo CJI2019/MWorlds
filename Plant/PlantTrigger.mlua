@@ -17,14 +17,14 @@ script PlantTrigger extends SpaceBarTriggerComponent
 	@ExecSpace("ClientOnly")
 	@EventSender("Self")
 	handler HandleTriggerLeaveEvent(TriggerLeaveEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TriggerComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TriggerBodyEntity = event.TriggerBodyEntity
-		---------------------------------------------------------
+		
+		
+		
+		
+		
+		
+		
 		self:LeaveTrigger()
 	end
 

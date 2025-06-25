@@ -71,12 +71,12 @@ script UIQuickSlotComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnInventoryModified(OnInventoryModified event)
-		-- Parameters
+		
 		local itemIndex = event.itemIndex
-		-- local itemCount_Table = event.itemCount_Table
-		-- local inventoryIndex_Table = event.inventoryIndex_Table
+		
+		
 		local total_ItemCount = event.total_ItemCount
-		---------------------------------------------------------
+		
 		if self.item_Index ~= itemIndex then
 			return
 		end
@@ -93,10 +93,10 @@ script UIQuickSlotComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnGetTotalItemCount(OnGetTotalItemCount event)
-		-- Parameters
+		
 		local item_Index = event.item_Index
 		local totalItemCount = event.totalItemCount
-		---------------------------------------------------------
+		
 		if self.item_Index ~= item_Index then
 			return
 		end
@@ -106,11 +106,11 @@ script UIQuickSlotComponent extends Component
 	@ExecSpace("ClientOnly")
 	@EventSender("LocalPlayer")
 	handler HandleOnInventorySlotItemRemoved(OnInventorySlotItemRemoved event)
-		-- Parameters
+		
 		local itemIndex = event.itemIndex
-		-- local inventoryIndex = event.inventoryIndex
+		
 		local totalItemCount = event.totalItemCount
-		---------------------------------------------------------
+		
 		if self.item_Index ~= itemIndex then
 			return
 		end

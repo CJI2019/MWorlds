@@ -47,7 +47,7 @@ script QuestManager extends Logic
 		if items ~= nil then
 			local inventory = player.PlayerInventory
 			if inventory ~= nil then
-				-- 모든 보상이 들어 갈 수 있는지 확인을 해야함.
+				
 				if inventory:CanReceiveItems(items) == false then
 					local cnt = 0
 					for itemId, _ in pairs(items) do
@@ -64,7 +64,7 @@ script QuestManager extends Logic
 				return false
 			end
 		end
-		-- exp 는 인벤토리 여부와 관계없이 받을 수 있음.
+		
 		local exp = self.questInfos[questId].questReward["exp"]
 		if exp ~= nil then
 			local event = OnExpUpdated()

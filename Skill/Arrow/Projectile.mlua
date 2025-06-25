@@ -21,7 +21,7 @@ script Projectile extends Component
 	property Entity Firer = nil
 
 	method void OnBeginPlay()
-		-- 발사체가 발사되기 전에는 움직이지 않도록 일단 false로 설정
+		
 		self._T.Fired = false
 	end
 
@@ -44,10 +44,10 @@ script Projectile extends Component
 		    	self:Explode()
 		    end
 		
-		    -- DestroyAfterSec 시간 이후에 destroySelf가 실행되도록 타이머 설정
+		    
 		    _TimerService:SetTimerOnce(destroySelf, self.DestroyAfterSec) 
 		
-		    -- 왼쪽으로 발사할 때는 발사체의 스프라이트 방향 전환
+		    
 		    self.Entity.SpriteRendererComponent.FlipX = not self.ToLeft 
 		
 		    self._T.Fired = true
@@ -56,7 +56,7 @@ script Projectile extends Component
 	method void Explode()
 		    local shape = BoxShape(Vector2.zero, Vector2.one, 0)
 		
-		    -- 폭발 이펙트 sprite 사이즈를 가져와 공격 영역으로 설정
+		    
 		    _ResourceService:PreloadAsync({self.ExplodeSpriteRUID}, function()
 		    	if not isvalid(self.Firer) or not isvalid(self.Firer.PlayerAttack) then
 			   		return
@@ -70,13 +70,13 @@ script Projectile extends Component
 		    	local spriteSize = firstSpriteSizeInPixel / ppu
 		    	local positionOffset = (firstSpriteSizeInPixel / 2 - firstFrameSprite.PivotPixel:ToVector2()) / ppu
 		
-		    	-- 오프셋 보정
+		    	
 		    	local effectOffset = self.ExplodeEffectOffset
 		    	if self.ToLeft then
 		    		effectOffset.x = -effectOffset.x
 		    	end
 		
-		    	-- 폭발 이펙트의 영역만큼 공격함
+		    	
 		    	local transform = self.Entity.TransformComponent
 		    	local worldPosition = transform.WorldPosition
 		    	local scale = self.EffectScale
@@ -92,29 +92,29 @@ script Projectile extends Component
 		
 		    	self.Firer.PlayerAttack:AttackFast(shape, nil, CollisionGroups.Monster)		
 		
-		    	-- 폭발 이펙트 재생
+		    	
 		    	local effectPosition = Vector3(transform.Position.x + effectOffset.x, transform.Position.y + effectOffset.y, transform.Position.z)
 		    	local options = { ["FlipX"] = not self.ToLeft }
 		    	_EffectService:PlayEffect(self.ExplodeSpriteRUID, self.Entity, effectPosition, 0, Vector3.one * self.EffectScale, false, options)	
 		
-		    	-- 발사체 제거
+		    	
 		    	self.Entity:Destroy()
 		    end)
 	end
 
 	@EventSender("Self")
 	handler HandleTriggerEnterEvent(TriggerEnterEvent event)
-		--------------- Native Event Sender Info ----------------
-		-- Sender: TriggerComponent
-		-- Space: Server, Client
-		---------------------------------------------------------
 		
-		-- Parameters
-		-- local TriggerBodyEntity = event.TriggerBodyEntity
-		---------------------------------------------------------
-		    -- Parameters
+		
+		
+		
+		
+		
+		
+		
+		    
 		    local TriggerBodyEntity = event.TriggerBodyEntity
-		    --------------------------------------------------------
+		    
 		    if isvalid(TriggerBodyEntity.Monster) == false then
 		    	return
 		    end
